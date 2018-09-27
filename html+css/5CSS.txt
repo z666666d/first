@@ -1,0 +1,140 @@
+CSS概述
+	CSS即层叠样式表(Cascading Style Sheets)用来定义网页的显示效果
+	可以解决html代码对样式定义的重复,提高了后期样式代码的可维护性
+	并且增强了网页显示效果的功能
+	简单说就是CSS将网页内容和显示样式进行了分离,提高了显示功能
+
+CSS和HTML结合的方式
+	
+	1.每个html标签中都有一个style属性,其属性值就是css语句,
+	多个css语句用空格分割,那么这个标签的样式就是这个style规定的
+
+	2.使用style标签,直接写入css语句,style标签一般定义在head标签中
+
+	3.在style中用 @import导入css文件
+
+	4.使用html的link标签,关联css文件
+
+	四种方式的优先级:
+	由上到下,由外到内,优先级由低到高
+
+CSS的代码格式
+	选择器名称{属性名: 属性值; 属性名: 属性值; ........}
+	属性与属性之间用分号隔开
+	属性与属性值之间用冒号连接
+	如果一个属性有多个属性值的话,多个值之间用空格分割
+
+常见选择器
+	1.标签名选择器,使用html的标签名
+	
+	2.类选择器,使用标签的class属性来区分
+	书写方式为  标签名.类名
+	如果标签不同,类名相同的一类元素需要相同的样式
+	类选择器可以写成	.类名
+	
+	3.id选择器,使用标签的id属性来区分
+	书写方式为  标签名#id
+	如果写为   #id形式可以使所有id一样的元素使用该样式(与类选择器一样)
+	但是,通常id在页面中是唯一的,因为该属性除了给css使用,还可以被js使用
+	id通常都是为了去标识页面中一些特定区域时使用的
+
+	优先级:
+	标签选择器<类选择器<id选择器<style属性
+
+扩展选择器
+	1.关联选择器
+	标签是可以嵌套的,要让相同的标签下的不同标签显示不同的样式,就要用到关联选择器
+	比如要选择span标签中的b标签 选择器写为span b
+	标签之间用空格分隔
+
+	2.组合选择器
+	对多个选择器进行相同样式的设定
+	书写方式 选择器A，选择器B   选择器直接用逗号分开
+
+	3.伪元素选择器
+	伪元素表示为标签的某种状态
+	书写方式为   标签:伪元素   中间使用冒号分隔
+
+盒子模型
+	前端开发以div+css为主
+	用css来设置每个div的样式,位置.大小等等
+	盒子的边框
+	border   top bottom left right
+	盒子的内边距
+	pappding    top bottom left right
+	盒子的外边距
+	margin    top bottom left right
+
+布局
+	1.漂浮float
+	初始值为none
+	left:文本流向对象的右边
+	right:文本流向对象的左边
+	实例:图文混排
+	
+	2.定位position
+	初始值为static:无特殊定位
+	absolute:将对象从文档流里拖出,使用left,right,bottom,top设置与父对象的距离
+	注:这些属性定义的距离是相对其最接近的一个有定位设置的父对象,若没有,则相对于整个页面
+	绝对定位还可以使内嵌元素（行内元素）支持宽高，块元素会撑开宽度
+
+	relative:利用left,right,bottom,top等属性在正常的文档流里偏移.其他div不受影响
+
+	定位元素的层级：默认后者的层级高于前者。可以用z-index属性设定层级，值高的显示出来，层级一样，还是后定位的高于前者
+
+	3.clear
+	none,默认值
+	left,不允许左边有浮动对象
+	right.不允许右边有浮动对象
+	both,左右都不允许有浮动对象
+
+css中常见样式及书写顺序
+	
+	1.书写顺序
+		位置属性：position、top、right、z-index、display、float等
+		自身属性：width、height、padding、margin等
+		文字属性：font-style、font-variant、font-weight、font-size、line-height、font-family
+		背景：background、border
+
+	2.常见属性
+		
+		width		宽度
+		height		高度
+		background	背景
+		border		边框
+		padding		内边距
+		margin		外边距
+		font-size	文字大小
+		font-family	字体
+		color		文字颜色
+		line-height	行高
+		text-align	文本对齐方式
+		text-indent	首行缩进
+		font-weight	文字着重
+		font-style	文字样式
+		text-decoration	文本修饰
+		letter-spacing	字母间距
+		word-spacing	单词间距
+
+标签转换
+	1.标签的基本特性
+	
+	行内元素：同行可以跟其他元素，
+		用内容撑开宽度（有多少内容就有多宽）
+		行内标签不支持宽高属性、上下内外边距属性
+		代码换行被解析，在元素之间会有一个距离,一个空格,即一个文字的一半距离
+	块元素：默认独占一行
+		没有设置宽度，宽度就默认为整行
+		支持所有css属性
+
+	2.标签的转换：
+	display属性。
+	display：none	显示为无
+	display：block	显示为块元素
+	display：inline	显示为行内元素
+	display:inline-block	行内块元素
+
+	<img>标签  不会独占一行.但是支持宽高属性,既不是行内元素,也不是块元素
+	他是行内块元素,没设置宽度时,内容撑开宽度,支持宽高属性,块元素在同一行内显示
+
+	ie6和ie7不支持inline-block元素

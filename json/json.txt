@@ -1,0 +1,36 @@
+json与java对象集合之间的转换
+	
+	1.java对象==》json
+	JSONObject.fromObject（java对象）
+
+	JSONArray.fromObject（java对象）
+
+	2.json==》java对象
+
+	JSONObject.toBean（json对象，java对象.class）
+
+	获得JSONArray的某个元素
+	Object o = JSONArray.get（index）
+	JSONObject.fromObject（o）
+	JSONObject.toBean（json对象，java对象.class）
+
+	3.list==》json
+	JSONObject.fromObject（list）
+	JSONArray.fromObject（list）
+
+	4.json==》list
+	JSONArray.toList（JSONArray对象，java对象.class）
+
+	5.map==》json
+	JSONObject.fromObject（map）
+	JSONArray.fromObject（map）
+
+	6.json==》map
+	json不能直接转换为map集合
+
+	Map map = new HashMap（）;
+	map.put("frist",java对象.class);
+
+	bean = JSONObejct.toBean(jsonObject,bean.class,map)
+
+	bean.getFrist()

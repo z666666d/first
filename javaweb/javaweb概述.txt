@@ -1,0 +1,78 @@
+web概述
+	服务器上的web资源分为：
+	静态资源：基本不变，如：html，css,js
+	动态资源:根据不同的环境不同,是动态的.动态资源生成静态资源,如:JSP,ASP
+
+web开发的常用服务器:
+	javaee:是13种技术的总称,Servlet/JSP数据javaEE技术的一种
+	
+	常见服务器:
+	WebLogic:支持JavaEE规范,称之为JavaEE容器,重量级服务器
+	WebSphereAS:支持JavaEE规范
+	JbossAS:支持JavaEE规范,免费
+	Tomcat:支持Servlet/JSP规范,轻量级服务器
+
+Tomcat安装问题
+	要设置JAVA_HOME和JRE_HOME环境变量   即JAK安装目录.否则Tomcat无法启动
+	HTTP协议规定,web应用的默认端口号是80,Tomcat默认的端口号是8080
+
+	在Tomcat\conf目录下,server.xml文件中可以修改默认端口
+
+	可以设置CATALINA_HOME环境变量,即Tomcat安装目录
+
+Tomcat目录结构
+	bin:运行Tomcat的相关命令
+	conf:Tomcat的配置文件
+	lib:Tomcat运行需要的jar包
+	logs:Tomcat的运行日志
+	temp:存放临时文件
+	webapps:web应用的存放目录
+	work:Tomcat的工作目录
+
+JavaWeb应用的目录结构(sun制定的,有严格要求)
+	
+	html css js 文件等
+
+	WEB-INF:此目录必须有,且大小写必须完全一致.该目录中的资源,用户无法直接访问
+		classes:存放java类的字节码
+		lib:存放本应用需要的jar包
+		web.xml:本应用的配置文件
+
+部署JavaWeb应用到Tomcat中
+	两种方式:
+	方式一:把应用直接拷贝到Tomcat\webapps目录下
+	方式二:把应用打包成war包,再拷贝到Tomcat\webapps目录下
+		在应用目录下使用jar命令
+		jar -cvf xxx.war .(点代表当前目录下所有文件)
+
+设置虚拟目录:
+	方式一:
+	1.在Tomcat\conf\server.xml中,找到<Host name="localhost" />
+	2.在其中增加一个子元素:
+	<Context path="haha" docBase="E:\MyApp" />
+	3.重启Tomcat
+	4.可以在在浏览器中用虚拟目录haha下访问MyApp了
+	不建议使用方式一,因为该方法必须重启Tomcat
+
+	方式二:
+	在Tomcat\conf\[enginename]\[hostname]目录下建立一个扩展名为xml的文件
+	文件名就是虚拟目录
+	在文件中增加:
+	<?xml version="1.0"?>
+	<Context docBase="E:\MyApp" /> 
+
+	设置默认应用:
+	设置虚拟路径为ROOT,即可
+	由于默认应用特殊,使用方式二也要重启Tomcat
+
+	设置默认主页:
+	修改web.xml文件
+	在文件中加上<welcome-file-list>标签
+	为欢迎页列表
+	子标签为<welcome-file>
+	为默认按顺序在根目录下寻找
+
+	将应用的虚拟路径设置为ROOT,且设置应用的默认主页.设置默认端口号为80
+	就可以直接用http://localhost/访问指定主页
+
+

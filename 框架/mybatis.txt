@@ -1,0 +1,29 @@
+配置文件的优化：
+	1.设置一个property文件，将driver url username password 写入配置文件中
+	在使用时就用property标签将配置信息导入。
+	2.设置别名，参数类型时要写包名加类名比较长，可以用typeAliases标签设置别名。
+
+解决属性名和数据表列名不一致的方法：
+	方法一：在mapper文件映射语句中给列名指定别名。与java实体类的属性名一致。
+	如 select 列名 别名 from 表名 where #{id}
+	方法二：设置结果映射类型，将resultType改为resultMap，将结果映射为一个Map集合而不是直接变为一个实体类。通过resultMap标签：
+	<resultMap type="实体类名" id="Map集合名">
+		<id column="列名" proprety="实体属性名">	
+	</resultMap>
+
+分页的实现方法：
+	方法一：
+	在mysql中分页就是在查询语句后面加上limit startIndex pageSize
+	将参数类型parameterType设置为map
+	所以在写mapper映射文件时sql语句映射写成select * from 数据表 limit #{startIndex}，#{pageSize}
+	然后在dao中的方法通过参数传入currentPage和pageSize
+	将两个参数放入map集合中，session.selectList（映射文件，map）
+	将map集合传入完成分页，这样就不用为参数设置一个实体类，用map来解决分页参数问题
+
+	方法二：通过RowBounds来实现分页
+	new一个RowBounds对象，将startIndex和pageSize作为参数传入。
+	mapper映射文件不用改变，只需要创建一个RowBounds对象来实现分页。
+
+多对一的查询方式：
+	两种方式：按结果嵌套处理和按查询嵌套处理
+	用到resultMap标签中的association关联属性标签

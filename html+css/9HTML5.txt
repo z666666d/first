@@ -1,0 +1,270 @@
+HTML5新增语义化标签
+	
+	页面结构划分的语义化标签:
+	<header><footer>页面或板块的头部/底部
+	<nav>导航标签
+	<hgroup>标题组合标签   子标题或标语的组合
+	<section>标签	页面上的板块标签  用于划分页面上的不同区域.或文章的不同节
+	<article>用来表示页面中一个结构完整且相对独立的区域(主体)
+	<aside>和主体关联的附属信息,引用,侧边栏.广告等
+
+	<figure>用于媒体元素的组合,一般用于图片或视频
+	<figcaption> figure的子标签.用于对figure内容进行说明
+	
+	<time>标签   专门表示时间的标签
+
+	<datalist>选项列表标签   与input元素配合使用,定义input可能的值
+	当datalist的id属性值和input的list属性值相同时.两个元素相互关联
+	datalist的子标签为<option>  选项标签
+
+	<details>标签   描述文档或某个部分的细节
+	子标签:<summary> details元素的标题
+	可用<p>标签封装详细内容,默认只显示标题,展开才显示详细内容
+	details标签的Open属性.默认展开
+
+	<dialog>标签
+	子标签<dt><dd>
+	Open属性默认展开
+
+	<address>标签  封装作者的联系信息
+
+	<mark>标签   标记标签   可以通过css设置背景颜色
+
+	<progress>进度条标签   
+	max属性:进度条总长度
+	value:进度条的当前值
+
+表单验证反馈
+	
+	添加验证事件函数
+	addEventListener('invalid',fn1,false);
+	取消默认验证行为
+	ev.preventDefault();
+	可以通过validity对象的valid查看验证是否通过
+	如果八种验证都通过就返回true,否则返回false
+
+	valueMissing:输入值为空时返回true
+	typeMismatch:输入值与控件类型不匹配返回true
+	patternMismatch:输入值不满足pattern正则表达式时返回true
+	tooLong:超过maxLength限制的最大值时返回true
+	rangeUnderflow：是否小于range的最小值，小于返回true
+	rangeOverflow：是否大于range的最大值。大于返回true
+	stepMismatch：验证range当前值是否符合min、max、step的规则。不符合返回true
+	customError：不符合自定义验证时返回true
+
+	setCustomValidity（）设置自定义验证
+
+	当八项验证都返回false时，valid值为true
+
+	formnovalidate  关闭表单验证
+
+新的选择器
+
+	querySelector（）；将id、类名、标签以字符串的形式传入
+	'#id'   '.class'   '标签'   '[属性=值]'
+	这个方法只能选择一个元素
+
+	querySelectorAll()   获取一组元素的集合
+
+	getElementsByClassName()  专门用于获取一组class元素的方法
+
+	classList  获取class列表   返回值给object
+	可以通过length  获取class的长度
+	add()  添加class
+	remove()  删除class
+	toggle()  切换class   如果有,就删除.如果没有,就添加
+
+JSON的新方法
+	
+	eval()方法,可以将任何字符串转变才JS语句
+
+	parse()方法:只能解析JSON形式的字符串转变成JS语句(安全性更高)
+	必须是严格的JSON形式,属性也要加引号
+
+	stringify()方法:将JS转换成字符串
+
+data自定义数据
+	设置:
+	data-属性名="值";
+	获取 元素.dataset.属性名
+
+拖放
+	将元素的draggable设置为true,元素就可以进行拖拽了
+	
+	被拖拽元素事件
+	dragstart:拖拽前触发
+	drag:拖拽前至拖拽结束触发
+	dragend:拖拽结束触发
+
+	目标元素事件:
+	dragenter:进入目标元素时触发
+	dragover:进入目标元素到离开目标元素之间触发
+	dragleave:离开目标元素时触发
+	drop:在目标元素上释放鼠标触发
+
+	注:要想触发drop事件,就必须在dragover中阻止默认事件
+
+	在火狐浏览器想要完成拖拽,必须设置dataTransfer对象的setData()方法
+	通过event对象获取dataTransfer对象,通过setData()方法设置key和value
+	可以通过getData()方法获取数据
+
+	dataTransfer对象下的其他方法:
+	effectAllowed()方法.设置光标的样式
+	none,copy,copyLink,copyMove,link,linkMove,move,all和uninitialized
+
+	setDragImage()方法  三个参数:指定元素,坐标X,坐标Y
+	指定拖拽的阴影,
+
+	files  通过该属性可以获取外部拖拽的文件,返回一个filesList列表
+	length属性:获取文件列表中文件的数量
+	type属性:获取被拖拽元素的属性
+
+	通过FileReader读取文件信息
+
+	readAsDataURL   读取参数文件对象的Url
+
+	onload		读取文件成功完成时触发此事件
+	this.result	获取读取到的文件数据
+
+canvas
+	<canvas>标签   网页绘图
+
+	默认宽300px,高150px
+
+	canvas设置宽高要在标签上设置,而不是在style标签中设置
+	设置在style中设置宽高,是相对于默认值等比例缩放
+
+	canvas只是一个图形容器,要绘制图形必须通过脚本来完成
+
+	先通过id获取canvas元素	
+	再用元素的getContext('2d');获取绘图环境
+
+	绘制矩形:
+	fillRect(left,top,width,height);默认的颜色是黑色,实心矩形
+	strokeRect(left,top,width,height)绘制带边框的空心矩形,默认为一像素的黑色边框.
+	由于边框在显示时,是以边框线往两边延伸.1px宽度为一边半个像素.只能一个像素一个像素的显示.
+	所以1px宽度的边框显示出来时两个像素
+
+	fillstyle('color');填充的颜色
+	lineWidth();边框的宽度.是一个数值
+	strokeStyle('color');边框的颜色
+
+	注意:边框和内部矩形绘制的顺序不一样会影响到显示效果
+	由于边框的宽度是以边线向内外延伸的,所以会和内部填充的颜色产生覆盖效果
+
+
+	边界绘制
+	
+	lineJoin:边界连接点的样式
+	miter:默认  round:圆角   bevel:斜角
+
+	lineCap:端点样式
+	butt:默认   round:圆角   square:长度多出宽一半的值.
+
+
+	绘制路径
+	beginPath:开始绘制路径,将不同的图形分开,不加的话后面的语句和作用于前面所有的图形
+	closePath:结束绘制路径,自动闭合绘制的图形
+	moveTo:移动到绘制的新目标点
+	lineTo:新的目标点
+
+	stroke():画线(边框),默认为黑色
+	fill():填充区域.默认为黑色
+	rect():绘制矩形,同样有四个参数,但是必须要stroke或fill方法才能看见
+	clearRect():删除矩形区域内的内容,四个参数
+	save():保存路径
+	restore():恢复路径
+	fillstyle方法会作用于后面的所有图形.用sava和restore方法限制一个区域
+	可以限制该方法的作用区域
+
+	绘制圆形
+	arc(x,y,半径,起始弧度,结束弧度,旋转方向)
+	x,y:圆心坐标   半径:圆形半径
+	起始弧度,结束弧度:弧度=角度*Math.PI/180
+	3点钟位置为0度,6,12点钟分别为90度和负90度.9点钟为正负180度
+	旋转方向:顺时针:false   逆时针:true
+	必须要加上stroke或fill才能显示出来
+	加上closePath才能变成一个闭合的扇形
+	
+	画一个圆就是0度到360度,换算成弧度,如果起始弧度和结束弧度一样,那么画出来是一条直线
+
+	绘制其他曲线
+	arcTo(x1,y1,x2,y2,r)
+	参数为始末位置坐标以及半径
+
+	quadraticCurveTo(dx,dy,x1,y1)
+	贝塞尔曲线
+
+	bezierCurveTo(dx1,dy1,dx2,dy2,x1,y1)
+	贝塞尔曲线
+
+	canvas变换
+	translate(x,y)偏移.以左上角起始点为基点,移动指定坐标位置
+	rotate(弧度)旋转.以图形左上角为中心进行旋转
+	scale(宽度倍数,高度倍数)图形的缩放
+	rotate配合translate可以完成围绕图形中心旋转
+
+	插入图片
+	要等图片加载完成之后，才会执行canvas操作
+	这时可以使用图片预加载，调用onload方法完成
+
+	drawImage（oimg，x,y,w,h）
+	oimg:图片对象   x,y图片坐标   w,h图片宽高
+
+	设置背景:
+	createPattern(oImg,平铺方式)
+	oImg:图片对象,
+	平铺方式:repeat:x,y轴都平铺
+	repeat-x,repeat-y,仅x轴平铺或仅y轴平铺
+	on-repeat:不平铺
+
+	渐变:
+	线性渐变:createLinearGradient(x1,y1,x2,y2)
+	渐变起始和结束的坐标 
+	addColorStop(位置,颜色)添加新的渐变点  0代表起始点,1代表结束点
+
+	放射性渐变:
+	createRadialGradient(x1,y1,r1,x2,y2,r2)
+	第一个圆的坐标和半径,第二个圆的坐标和半径
+
+	添加文本
+	strokeText(文字,x,y)文字边框  空心文字
+	fillText(文字,x,y)文字填充	实心文字
+	font:文字大小   两个参数:大小和字体样式  如oGC.font='60px impact';
+	textAlign左右对齐方式:默认是左对齐 left,right,center
+	textBaseline:上下对齐方式  默认是alphabetic  top,middle,bottom
+	同样可以通过fillStyle或strokeStyle方法来改变文字颜色
+
+	measureText(str).width   获取文字宽度(只有宽度,没有高度)
+	高度就是文字的大小
+
+	设置阴影:
+	shadowOffsetX、shadowOffsetY:X,Y轴的偏移量
+	shadowBlur:高斯模糊值
+	shadowColor:阴影颜色   默认颜色为黑色透明
+
+	像素操作
+	getImageData(x,y,w,h)获取图像数据
+	通过width,height属性获取宽和高
+	data属性获取数据数组 4个值代表一个像素,前三个为rgb,取值为0-255
+	最后一个值表示透明度.取值也是0-255
+
+	设置新的图像数据:
+	putImageData(获取的图像对象,x,y)
+	通过修改获取的data数组来修改图像数据
+
+	createImageData(w,h)生成新的像素矩阵,初始值为全透明的黑色
+
+	getXY,setXY  获取和设置指定坐标的像素
+
+	合成:
+	globalAlpha:设置全局阿尔法值:全局透明度
+
+	globalCompositeOperation属性  通过属性值的不同,可以切换不同的覆盖效果
+
+	将画布导出为图像:
+	toDataURL   火狐可以直接右键导出
+
+	事件操作:
+	isPointInPath(x,y)		判断坐标是否在点击范围内
+	由于canvas下的图形都在canvas标签下.用该事件区别操作的图形

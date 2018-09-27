@@ -1,0 +1,211 @@
+spring的优点和主要内容
+	轻量级框架
+	Ioc容器---控制反转
+	Aop面向切面编程
+	对事务的支持
+	对框架的支持
+
+Ioc(inversion of control) 控制反转
+	依赖注入和控制反转是相同的思想的从两个角度不同的描述。
+	对象所依赖的外部资源（包括文件、对象、常量数据等）通过容器来注入，而不是应用程序自身来创建对象
+	这样的做法降低了代码之间的耦合性，方便了程序的扩展
+
+使用IOC容器创建对象的三种方式：
+	1.使用无参构造方法创建对象  属性通过property标签来设置，调用setter方法来设置属性   参数为name--属性名  value---属性值
+	2.通过有参构造方法创建对象  不需要属性的setter方法，直接通过constructor-arg标签将属性作为构造方法参数传递
+		参数为index---参数索引   value---参数值  或者通过参数名来设置  name---参数名   value---参数值
+		或者通过参数的类型来设置   type---参数类型   value---参数值
+	3.通过工厂方法来创建对象
+	需要写一个工厂类来获取该对象
+	
+	a.静态工厂，通过静态方法来获取对象
+	在配置文件中：
+	id---对象名   class---工厂类名  factory-method---工厂类中产生该对象的方法
+	若factory-method有参数，就在constructor-arg标签下添加参数
+
+	b.动态工厂
+	在配置文件中先写一个动态工厂的bean，创建一个动态工厂对象
+	然后在写id  factory-bean  factory-method  若方法有参数，写constructor-arg标签添加参数
+
+spring配置文件
+	alias标签 设置别名   name---对象名   alias---别名   设置别名后getBean方法可以通过别名获取该对象
+	bean标签  id---bean的唯一标识符  如果没有设置id，name就是bean的标识符
+ 		  name 设置了id，还可以设置name相当于别名 可以同时设置多个别名
+		  class---bean的全限定名：包名+类名
+		  如果id和name都没有设置，可以通过applicationContext.getBean(class);来获取bean对象
+	import标签  spring的配置文件特别多，多个配置文件可以通过import来导入
+		    resource---需要导入的配置文件路径
+
+依赖注入
+	bean的创建需要依赖容器，bean对象创建所需的资源需要通过容器来设置和装配
+
+	spring注入的方式：
+	1.构造器注入  即IOC创建对象
+
+	2.setter注入
+	被注入的属性必须有set方法，且必须符合命名规范
+	a.常量注入
+	常量注入通过property标签来注入  name---属性名  value---属性值
+	b.bean注入
+	先通过bean标签配置好需要注入的bean，然后在property标签来bean注入
+	name---属性名  ref---注入bean的id
+	c.数组注入
+	在property标签中写array标签，在array标签中嵌套value标签写数组的值
+	d.list注入
+	在property标签中嵌套list标签，在list标签中嵌套value标签
+	e.map注入
+	property标签中嵌套map标签，map标签中嵌套entry标签，entry标签有两个属性  key  和  value
+	或者在entry下写key标签中嵌套value标签为键  直接嵌套value标签为值
+	f.set注入
+	在property标签下嵌套set标签，set标签下嵌套value标签
+	g.null注入
+	在property标签下嵌套null标签，该属性值就为null
+	h.properties注入
+	property标签下嵌套props标签，props标签下嵌套prop标签  <prop key="键">值</prop>
+	i.p命名空间注入
+	直接在bean标签中写p:属性名="属性值"
+	注意p注入需要在头文件中加入 xmlns:p="http://www.springframework.org/schema/p"
+
+	c命名空间注入
+	在bean标签中写c:参数名="参数值"，必须有对应参数的构造方法
+	注意c注入需要在头文件中加入 xmlns:c="http://www.springframework.org/schema/c"
+
+bean的作用域
+	bean标签的scope属性  默认是singleton的
+	singleton 单例  整个容器中只有一个对象实例
+	prototype 原型	每次获取bean都产生一个新的对象
+	request  每次请求时创建一个新的对象
+	session  在会话范围内只有一个对象
+	global session  只在portlet下有用  表示时application
+	application  在应用范围中只有一个对象
+
+bean的自动装配
+	用于简化spring的配置文件
+	通过bean标签的autowire属性完成自动装配设置
+	byName  根据名称去查找相应的bean，如果有就自动装配  这里的名称是根据set方法的名称
+	byType  根据类型进行自动装配  注意：该类型的bean只能有一个，否则会报错
+	不推荐使用自动装配，而使用注解
+
+静态代理
+	抽象类或接口---抽象出方法
+	被代理的实体类---真实角色，业务更加纯粹，不再需要去关注一些公共的事情
+	代理角色---公共的业务有代理角色来完成
+	
+	优点：公共业务更加集中，方便以后的扩展
+	缺点：增加了代理类的编写，工作量变大了，降低了开发效率
+
+动态代理
+	角色与静态代理一样，只是代理类是动态生成的
+	动态代理分为两类；
+	1.基于接口的动态代理：jdk动态代理
+	2.基于类的动态代理：cglib
+
+	创建一个类实现InvocationHandler接口
+	通过proxy类的newProxyInstance(classLoader,Interface,invacationHandler)拿到动态代理类
+	通过invoke(proxy,method,args[]){
+		
+		xxxxxxxxxxxxxxxxxxxxxxx
+		Object result = method.invoke（target，args）
+		xxxxxxxxxxxxxxxxxxxxxxxxxx
+	}
+	来执行代理的方法
+	在该类中写其他方法并且在执行前后可以执行完成动态代理
+	
+	注意：jdk的动态代理是由java内部的反射机制来实现的，
+	jdk动态代理的前提是目标类必须基于统一的接口
+
+AOP:面向切面编程
+	AOP aspect oriented programming
+	AOP在spring中的作用主要是：提供声明式服务（声明式事务）
+	以及允许用户实现自定义切面，用AOP来完善OOP的使用
+
+	传统的面向对象编程时自上而下的纵向编程思想，而AOP是横向的编程思想
+
+	AOP的好处是：
+	使业务更加纯粹，将公共的代码集中起来
+
+	在spring中aop主要作用就是将公共的业务和领域业务结合起来，本质还是动态代理
+	spring aop的实现方式：定义一个类继承相应的advice类，重写其中的方法，将公共业务代码写进去
+	然后在配置文件中进行配置。就可以将公共业务代码加到相应的连接点
+	spring也可以自定义类作为动态代理的切面
+	aop：config标签下的aop：aspect标签来配置切面
+	嵌套aop：pointcut标签，通过expression属性和id属性来配置切入点
+	aop：after、aop：before等标签来将自定义类配置为前置通知、后置通知等
+	
+spring事务管理
+	1.事务传播机制（Propagation）
+	事务传播机制：spring使用动态代理来为某个方法自动添加事务，而代理应该给哪个方法增加事务行为，是有传播机制决定的。
+
+	spring包含7种事务传播级别
+	1）REQUIRED
+	默认的事务传播，加入当前正要执行的事务不在另外一个事务里，那么就起一个新的事务。
+	比如，serviceB.methodB的事务传播级别为PROPAGATION_REQUIRED，而serviceA.methodA已经开启了一个事务，
+	且serviceB.methodB运行在serviceA.methodA的内部，那么serviceB.methodB不会再开启一个新的事务
+	而serviceA.methodA执行时没有在事务中，则会分配一个新的事务
+	若serviceA.methodA出现异常需要回滚，即使serviceB.methodB事务已经提交，也会回滚
+
+	2）SUPPORTS
+	如果当前在事务中，即以事务的形式运行，如果当前不再一个事务中，那么就以非事务的形式运行。
+
+	3）MANDATORY
+	必须在一个事务中运行，如果没有就抛出异常。也就是说，他只能被一个父事务调用。否则，他就要抛出异常。
+	即该方法执行的时候必须已经有一个事务，否则会抛出异常
+
+	4）REQUIRES_NEW
+	与PROPAGATION_REQUIRED的区别在于serviceB.methodB执行的时候会开启一个新的事务，而serviceA.methodA的事务会挂起
+	等待serviceB.methodB事务执行完以后，才会继续执行
+	主要体现在事务回滚的时候，由于methodB是一个新的事务，所以methodA失败回滚的时候，methodB是不会回滚的
+
+	5）NOT_SUPPORTED
+	当前不支持事务，以非事务方式执行操作，如果当前存在事务，就把当前事务挂起。
+
+	6）NEVER
+	不能在事务中运行，如果当前存在事务，则抛出异常。
+
+	7）NESTED
+	理解Nested的关键是savepoint。
+	他与PROPAGATION_REQUIRES_NEW的区别是，PROPAGATION_REQUIRES_NEW另起一个事务，
+	将会与他的父事务相互独立，而Nested的事务和他的父事务是相依的，
+	他的提交是要等和他的父事务一块提交的。也就是说，如果父事务最后回滚，他也要回滚的。
+	而Nested事务的好处是他有一个savepoint。也就是说ServiceB.methodB失败回滚，
+	那么ServiceA.methodA也会回滚到savepoint点上，ServiceA.methodA可以选择另外一个分支，
+	比如ServiceC.methodC，继续执行，来尝试完成自己的事务。 但是这个事务并没有在EJB标准中定义。
+
+	2.事务隔离性
+	spring有五种事务隔离级别
+	1）DEFAULT：数据库默认的事务隔离级别，其余四种是与JDBC隔离级别相对应
+	2）READ_UNCOMMITTED（读未提交）
+	这是事务最低的隔离级别，它允许另外一个事务可以看到这个事务未提交的数据。这种隔离级别会产生脏读，不可重复读和幻像读。
+	3）READ_COMMITTED （读已提交）
+	保证一个事务修改的数据提交后才能被另外一个事务读取。另外一个事务不能读取该事务未提交的数据。
+	这种事务隔离级别可以避免脏读出现，但是可能会出现不可重复读和幻像读。
+	大多数数据库的默认级别就是Read committed，比如Sql Server , Oracle。
+	4）REPEATABLE_READ （可重复读）
+	保证了一个事务率先读取数据后，其他事务都不能修改该数据
+	这种事务隔离级别可以防止脏读，不可重复读。但是可能出现幻像读。
+	它除了保证一个事务不能读取另一个事务未提交的数据外，还保证了不可重复读
+	Mysql的默认隔离级别就是Repeatable read。
+	5）SERIALIZABLE（串行化）
+	这是花费最高代价但是最可靠的事务隔离级别。事务被处理为顺序执行。除了防止脏读，不可重复读外，还避免了幻像读。
+	一般很少使用这个级别
+
+	脏读：脏读就是指当一个事务正在访问数据，并且对数据进行了修改，而这种修改还没有提交到数据库中，
+	这时，另外一个事务也访问这个数据，然后使用了这个数据。
+	不可重复读：是指在一个事务内，多次读同一数据。在这个事务还没有结束时，另外一个事务也访问该同一数据。
+	那么，在第一个事务中的两次读数据之间，由于第二个事务的修改，
+	那么第一个事务两次读到的的数据可能是不一样的。
+	这样就发生了在一个事务内两次读到的数据是不一样的，因此称为是不可重复读。（即不能读到相同的数据内容）
+	幻读：是指当事务不是独立执行时发生的一种现象，例如第一个事务对一个表中的数据进行了修改，
+	这种修改涉及到表中的全部数据行。同时，第二个事务也修改这个表中的数据，这种修改是向表中插入一行新数据。
+	那么，以后就会发生操作第一个事务的用户发现表中还有没有修改的数据行，就好象发生了幻觉一样。
+
+	3.只读事务read-only
+	“只读事务”并不是一个强制选项，它只是一个“暗示”，提示数据库驱动程序和数据库系统，
+	这个事务并不包含更改数据的操作，那么JDBC驱动程序和数据库就有可能根据这种情况对该事务进行一些特定的优化，
+	比方说不安排相应的数据库锁，以减轻事务对数据库的压力，毕竟事务也是要消耗数据库的资源的。 
+	但是非要在“只读事务”里面修改数据，也并非不可以，只不过对于数据一致性的保护不像“读写事务”那样保险而已。 
+	因此，“只读事务”仅仅是一个性能优化的推荐配置而已，并非强制你要这样做不可
+
+
+
+

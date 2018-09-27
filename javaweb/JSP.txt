@@ -1,0 +1,390 @@
+概述
+	JSP全称时Java Server Pages,和servlet技术一样.都是sun公司定义的一种用于开发动态web资源的技术
+	JSP/Servlet规范.其实JSP就是Servlet
+
+	JSP最大的特点在于,写jsp就像在写html,但相对于html而言,
+	html只能为用户提供静态的数据,而jsp技术允许在页面中嵌套java代码,为用户提供动态的数据
+
+JSP的原理
+	JSP会被Tomcat翻译成一个Servlet，该Servlet在Tomcat/work/Catalina/localhost/应用名/...
+	有一个java文件和一个class字节码文件
+
+	第一次访问JSP页面会很慢的原因:要先将JSP翻译成Servlet,然后进行编译
+	在创建一个Servlet实例并进行初始化.才能进行访问
+
+	JSP将html排版在翻译成Servlet时写成了out.write("<html>");
+	每一行都通过该方法输出给客户端浏览器的
+
+	JSP页面中的java代码会原封不动的直接放进Servlet的service方法中
+
+JSP和Servlet开发的最佳实践
+	Servlet:一半作为控制组件,处理业务逻辑
+	JSP:一般作为显示组件,显示数据
+
+	程序的数据通常需要美化后再输出,让JSP即用java代码产生动态数据,有做美化会导致页面难以维护
+	让Servlet既产生数据,又在里面嵌套html代码美化数据,同样也会导致程序的可读性差,难以维护
+	因此,最好的办法就是根据这两门技术的特点,让他们各自负责各的
+	servlet只负责响应请求产生数据,并把数据通过转发技术带给jsp,数据的显示jsp来做
+
+JSP的基本语法
+	1.JSP的模板元素
+	就是JSP中的HTML标记,作用就是页面布局和美化
+
+	2.JSP的java脚本表达式
+	作用:输出数据到页面上
+	语法:<%=变量或表达式%>
+	实际在翻译成Servlet时就是:out.print(表达式);
+
+	3.JSP的脚本片段
+	作用:用于书写java代码
+	语法:<%
+		java代码;
+	%>
+	其中的java代码会原封不动的被服务器翻译到对应的Servlet的service方法中
+	在JSP脚本片段中只能出现java代码,不能出现其他模板元素
+	JSP中可以出现多个脚本片段,可以互相访问
+	尽量不要出现JSP脚本片段,将这些逻辑代码写到Servlet中
+	单个脚本片段中的java代码可以是不完整的,但是整个页面中的java代码必须是完整的
+	例如:
+	<%for(int i=0;i<5;i++)
+	{
+	%>
+	<p>文本<p>
+	
+	<%
+	}
+	%>
+
+	表示将文本打印5次
+	
+	4.JSP的声明
+	作用:定义类的成员
+	语法:<%!
+		java代码;
+	%>
+	在JSP页面中编写的所有代码都会默认翻译到servlet的service方法中
+	而JSP声明中的java代码会被翻译到service方法外面
+	所以JSP声明可以用于定义JSP页面转换成的Servlet程雪的静态代码块,成员变量和方法
+	多个静态代码块,成员变量和方法可以定义在一个JSP声明中,也可以分别单独定义在多个JSP声明中
+	JSP隐式对象的作用范围仅限于Servlet的service方法中,所以在JSP的声明中不能使用这些隐式对象
+
+	5.JSP的注释:
+	作用:注释java脚本代码
+	语法:<%--注释信息--%>
+	如果用html注释<!--注释-->,翻译成Servlet依然会向客户端输出,只是解析的时候作为注释不显示
+	而用JSP注释的内容,不会被翻译到Servlet中
+	<%
+		java注释
+	%>
+	也可以用JSP脚本片段,里面写java的注释,也不会显示
+
+JSP指令
+	JSP指令是为JSP引擎设计的(服务器).
+	JSP指令并不会直接产生任何可见输出,只是告诉引擎如何处理JSP页面的其余部分
+	三个指令:page,include,taglib
+
+	JSP指令的基本语法格式:
+	<%@ 指令名称 属性1="值1" 属性2="值2" .... %>
+	一个指令的多个属性,可以写在一个指令中,也可以分开写
+
+	1.page指令:
+	用于定义JSP页面的各种属性,无论page指令出现在JSP页面的什么地方,它作用的都是整个JSP页面
+	为了保持程序的可读性和遵循良好的编程习惯,page指令最好放在整个JSP页面的起始位置
+
+	属性:
+	language  指示JSP页面中使用的脚本语言   默认值是java
+	
+	extends   指示JSP对应的Servlet类的父类.最好不要修改.服务器有默认的
+	
+	import    导入JSP中的java脚本所使用到的类或包   (如同java中的import语句)
+	JSP引擎自动导入以下包中的类.不用写import:
+	java.lang.*
+	javax.servlet.*
+	javax.servlet.jsp.*
+	javax.servlet.http.*
+	在一条page指令的import属性中,可以引入多个类或包.其中每个类或包之间用逗号分隔
+	
+	session   指示JSP页面是否创建HttpSession对象   默认值为true
+
+	buffer    指示JSP用的输出流的缓存大小   默认值是8kb
+
+	autoFlush  自动刷新输出流的缓存   默认值为true
+
+	isThreadSafe   指示页面是否是线程安全的(已过时)  默认是true   true是不安全的  false是安全的,会实现SingleThreadModel接口
+
+	info   页面信息
+	
+	errorPage   指示当前页面出错后转发的页面  目标页面如果以"/"开头.代表当前应用,是绝对路径
+	配置全局错误提示页面:
+	在web.xml文件的根元素下加上<error-page>标签,他的子标签有:
+	<exception-type>:异常类型
+	<error-code>:错误代码(状态码)
+	<location>:出现指定类型的异常或错误状态码时跳转的页面  必须以"/"开头,不能写相对路径
+	page指令的errorpage属性的优先级高于web.xml中配置的全局错误提示页面
+
+	isErrorPage   指示当前页面是否产生Exception对象.默认值为false
+	如果为true,则翻译的Servlet类中会创建一个Throwable的Exception对象.用于记录错误信息
+
+	contentType  指示当前页面的MIME类型,和编码方式
+	作用与Servlet中的response.setContentType()方法完全一致
+
+	pageEncoding   通知引擎读取JSP时采取的编码(因为要将JSP翻译成Servlet)
+	JSP文件存储在硬盘中是1010代码,服务器收到浏览器请求要读取该JSP页面,默认是差ISO-8859-1码表
+	这时就要通过该属性来设置服务器读取时采取的码表
+	pageEcoding属性还包含contentType的作用
+
+	isELIgnored  是否忽略EL表达式  默认值是false  如果是true,则将EL表达式当做普通文本输出
+
+	2.include指令
+	作用:包含其他的组件.引入其他的JSP页面.
+	如果使用include指令引入了其他的JSP页面,那么JSP引擎会将这两个JSP翻译为一个Servlet
+	所有include指令引入通常也称之为静态引入
+
+	语法:<%@ include file="绝对路径或相对路径"%>
+
+	动态包含:
+	采用动作元素:<jsp:include page="绝对路径或相对路径"/>
+	动态包含会为两个jsp生成不同的servlet,在服务器输出给浏览器的时候再将两个servlet输出的结果合并
+
+	由于动态要生成多个servlet,所以效率要低于静态包含.所以应该尽量用静态包含
+
+	注意:
+	1.被引入的文件必须遵循JSP语法
+	2.被引入的文件可以是任意扩展名,但是JSP引擎都会按照处理JSP页面的方式来处理,所以JSP规范建议使用.jspf作为静态引入文件的扩展名
+	3.由于include指令涉及到两个JSP页面,并将两个JSP翻译为一个Servlet,所以两个JSP页面的指令不能冲突(除了pageEncoding和导包)
+
+	3.taglib指令
+	作用:引入外部的标签
+	语法:<%@ taglib uri="标签的名称空间" prefix="前缀"%>
+
+JSP中的九大隐式对象
+	
+	JSP引擎在调用JSP对于的_jspServlet时,会传递或创建9个与web开发相关的对象供_jspServlet使用
+	JSP技术的设计者为方便开发人员在编写JSP页面时获得这些web对象的引用,特意的定义了9个相应的变量
+	开发人员在JSP页面中通过这些变量就可以快速的获取这9个对象的引用
+
+	JSP的内置对象名称		对象的类型
+	request				HttpServletRequest
+	response			HttpServletResponse
+	session				HttpSession
+	application			ServletContext
+	config				ServletConfig
+	page				this(当前Servlet对象)
+	exception			java.lang.Throwable
+	out				JspWriter
+	pageContext			javax.servlet.jsp.PageContext
+
+	其中exception对象在page指令中的isErrorPage属性默认为false,要设置为true才有该对象
+	session对象对应page指令的session属性,默认为true,如果改为false则没有该对象
+
+	out隐式对象详解:
+		作用:用于向客户端发送文本数据
+		out对象是通过调用pageContext对象的getOut方法返回的,其作用与ServletResponse.getWriter方法返回的PrintWriter对象非常相似
+
+		out对象的类型是JspWriter,相当于一个带缓存功能(默认为8kb)的printWriter,通过page指令的buffer属性可以调整缓存的大小甚至关闭缓存
+
+		用out对象输出的文本会先写进该对象的缓冲区中,只有buffer满了,或者整个JSP页面结束,
+		才会调用printWriter对象,将缓冲区中的内容写进Servlet缓冲区中
+
+		在Response中的字节流和字符流不能同时使用,否则会产生异常
+		在JSP中的out对象是字符流,但是只有不使用out输出,用字节流不会产生异常(与Response获取的不同)
+
+	pageContext对象
+		三大作用:
+		1.本身是一个域对象,同时还能操作其他三大域对象(ServletRequest  HttpSession  ServletContext)
+			pageContext对象本身表示的与范围时本页面
+			域对象的三个方法getAttribute，setAttribute，removeAttribute
+
+			操作其他三个域对象
+			void setAttribute(String name,Object value,int scope)
+			void removeAttribute(String name,int scope)
+			Object getAttribute(String name,int scope)
+			参数int scope 是由PageContext类提供的静态变量规范
+			PageContext.PAGE_SCOPE(是PageContext对象本身的Map集合,代号是page)
+			PageContext.REQUEST_SCOPE(是ServletRequest对象的Map集合,代号是request)
+			PageContext.SESSION_SCOPE(是httpSession对象的Map集合,代号是session)
+			PageContext.APPLICATION_SCOPE(是ServletContext对象的Map集合,代号是application)
+
+		Object findAttribute(String name):依次按照page,request,session,application的范围搜索指定名称的对象,找到为止
+
+		
+		2.能够获取其他八个隐式对象
+		3.提供了转发和包含的方便方法
+
+		转发:RequestDispatcher rd = request.getRequestDispatcher("url");
+		rd.forward(request,response);
+
+		用pageContext对象:pageContext.forward("url");
+
+		包含::RequestDispatcher rd = request.getRequestDispatcher("url");
+		rd.include(request,response);
+		
+		pageContext.include("url");
+
+四大域对象
+	pageContext  request  response  application
+	用于两个资源之间的数据的传递
+	request:必须通过转发  适用于显示完数据就不用了
+	session:显示完数据,过一会儿自己还要用.单个用户
+	application:显示完数据,一会儿大家都要用,不建议使用,线程不安全,必须同步处理
+
+JSP常用的动作元素
+	<jsp:inculde />包含
+	<jsp:forward />转发
+	<jsp:param />在转发和包含时,利用该标签传递请求参数
+
+JSP开发原则：
+	JSP页面中不能出现一行Java脚本片段<%%>和Java表达式<%= %>
+
+	Java脚本的替代方案:自定义标签
+	Java表达式替代方案:EL表达式
+
+EL表达式
+	JSP中的表达式:Expression Language
+	基本语法${EL表达式}
+
+	作用:
+	1.获取数据
+	EL表达式主要用于替换JSP页面中的脚本表达式
+	从各种类型的web域中检索Java对象,获取数据(只能从四大域中获取数据)
+	${对象.属性名}可以获取指定对象的指定属性值,如果是JavaBean,通过<jsp:useBean>标签获取对象
+	EL表达式获取的数据如果为null,页面不会显示数据
+	因此EL表达式中永远不会出现空指针异常
+	p.name就是调用域中p对象的getName方法,点是运算符
+	${对象}会自动在page,request,session,application的范围内自动寻找
+	找到则返回相应的对象,没找到则返回""空字符串
+	其实就是调用PageContext.findAttribute方法
+
+	获取数组:
+	${arr[i]}
+	获取有序集合list集合的某个元素
+	${list[i]}
+	获取map集合的指定key的值
+	${map.key}
+
+	2.执行运算
+	利用EL表达式可以在JSP页面中执行一些基本的关系运算,逻辑运算和算术运算
+	关系运算符:
+	==或eq   !=或ne   <或lt   >或gt   <=或le   >=或ge
+	逻辑运算符
+	&&或and   ||或or   !或not
+	优先级:not>and>or
+	empty运算符:检查对象是否为null或""空字符串
+	写法:${empty 对象/字符串}  返回值为boolean类型
+	对于集合对象,放入域中如果没有任何元素,返回值也为true
+	三元表达式:
+	${user!=null?user.name:""}
+	注意:EL表达式不支持字符串连接操作
+	如:${"欢迎你"+user}是不支持的,可以写成${"欢迎你"}${user}
+	.运算符和[]运算符
+	.运算符能做的[]运算符也能做,[]运算符能做的,.运算符不一定能做
+	如用[]运算符获取数组或有序集合的某个元素,.运算符不能做
+
+	3.获取web开发的常用对象
+	EL表达式定义了11个隐式对象,利用这些隐式对象,
+	web开发人员可以很轻松的获得对web常用对象的引用,从而获取这些对象中的数据
+	这11个隐式对象中,其中一个是表示自身对象,其余的都是表示的Map结构
+
+	EL隐式对象名称		Java类型
+	pageContext		javax.servlet.jsp.PageContext		这个对象与JSP中的内置对象完全相同
+	pageScope		java.util.Map				代表着PageContext页面范围域的Map
+	requestScope		java.util.Map				代表着ServletRequest请求范围域内的Map
+	sessionScope		java.util.Map				代表着HttpSession会话范围域内的Map
+	applicationScope	java.util.Map				代表着ServletContext应用范围域内的Map
+
+	param			java.util.Map				代表着请求参数，key：请求参数的名称 value：请求参数的值。是一个字符串
+									如果请求参数重名，只会获取到第一个。 ${param.key}可以获取指定参数的值
+	paramvalues		java.util.Map				代表请求参数.key:请求参数的名称 value:请求参数的值  是一个字符串数组
+									有多个请求参数重名.可以用该对象获取值的数组  ${paramValues.key[i]} 取出指定的值
+	header			java.util.Map				代表请求消息头  key:头字段名称  value：值   是一个字符串
+									注意：请求消息头中有‘-’的，不符合java命名规范,会报错，不能用.运算符。这时要用到${paramValues["key"]}
+	headerValues		java.util.Map				代表请求消息头  key:头名称  value:值  是一个字符串数组   
+									当有多个同名头字段时,用该对象获取他们的值
+	cookie			java.util.Map				代表客户端提交的cookie的Map  key：cookie的name  value：cookie对象本身
+
+	initParam		java.util.Map				代表着全局初始化参数（web.xml的context-param标签）  key：初始化参数名  value：参数值
+
+
+	4.调用Java的方法(EL函数)
+	EL表达式允许用户开发自定义EL函数,以在JSP页面中通过EL表达式调用Java类的方法
+	注意:只能调用普通类的静态方法	
+	EL自定义函数的步骤:
+	a.编写一个java普通类,在里面定义一个静态方法
+
+	b.在javaweb应用的WEB-INF文件下建立一个扩展名为tld(taglib definition)的xml文件
+	<?xml version="1.0" encoding="UTF-8"?>
+			<taglib xmlns="http://java.sun.com/xml/ns/j2ee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+				xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-jsptaglibrary_2_0.xsd"
+				version="2.0">
+				<tlib-version>1.0</tlib-version>
+				<short-name>短名称</short-name>
+				<uri>命名空间</uri>
+				
+				<function>
+				<name>函数名<name>
+				<function-class>函数所在的类<function-class>
+				<function-signature>函数签名:返回值 函数名(参数类型)</function-signature>
+			</taglib>
+	
+	c.(可选步骤)前提是tld文件必须在WEB-INF文件夹下
+	告知应用，tld文件和tld中的uri的对应
+	修改web.xml文件，增加以下内容
+	<jsp-config>
+		<taglib>
+			<taglib-uri>命名空间</taglib-uri>
+			<taglib-location>tld文件路径</taglib-location>
+		</taglib>
+	</jsp-config>
+
+	d.在JSP中使用EL函数
+	用taglib指令,引入自定义EL函数库
+	<%@ taglib uri="命名空间" prefix="前缀名"%>
+
+	在EL表达式中调用:
+	${前缀名:函数名(参数)}
+
+SUN提供的标准EL函数库
+	JSTL标准标签:(JSP Standard Tag Libary)
+	五大部分:
+	Core:核心
+	Fmt:国际化
+	SQL:数据库操作
+	XML:xml操作
+	fn:EL函数库
+
+	使用的时候必须导入JSTL jar包:standard.jar JSTL.jar
+
+	核心标签库（EL表达式替换JSP中的java表达式，JSTL标签替换JSP中的java脚本片段）
+	1.c:if
+	作用；判断是否为true，如果为true，那么标签的主体内容就会显示
+
+	属性：
+	test   必须属性，而且必须是boolean类型的，可以写EL表达式
+	var	保存test运算结果的变量
+	scope	保存的域范围，默认是page
+
+	2.c:foreach
+	作用：遍历数组和集合
+
+	属性：
+	items：    要遍历的目标对象  支持表达式  一般使用EL表达式
+	var	   遍历的元素
+
+	注意：Map的var指向的是map.Entry   是EntrySet
+	通过.key和.value可以获取相应的键和值
+
+	begin	    从指定为位置开始遍历
+	end	    指定遍历结束的位置(包含end)
+	step	    遍历的步长,默认步长为1
+
+	如果没有指定items,有begin和end属性,就是从begin开始到end结束的数字
+
+	varStatus    引用一个对象，值是给这个对象取名字
+		该对象有以下方法:
+		getIndex()	当前纪录的索引号,从0开始
+		getCount()	当前纪录的顺序,从1开始
+		isFirst()	当前纪录是否是第一条纪录
+		isLast()	当前纪录是否是最后一条记录
+
+		在JSP中直接用.运算符  .index  .count  .frist  .last
+	

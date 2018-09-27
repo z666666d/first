@@ -1,0 +1,83 @@
+注解
+	注解，又称为元数据。是一种描述数据的数据，源代码的元数据
+
+	注解（Annotation）：是一种应用于类,方法,参数,变量,构造器,以及声明中的特殊修饰符
+	注解是一种用来描述元数据的工具
+
+三个基本的Annotation
+	@Override :该注解只能用于方法,限定该方法为重写父类的方法,必须要符合重写方法的规范才能编译通过
+	@Deprecated:用于表示某个程序的类,方法等已过时
+	@SuppressWarnings:抑制警告  编译时的黄色波浪线
+		@SuppressWarnings("抑制警告的具体类型") 
+		
+		可以接收的字符串:
+		unused:变量未使用
+		deprecation:使用的不赞成使用的类或方法
+		unchecked:执行了未检查的转换  比如没有泛型等
+		falthrough:当switch程序块直接通往下一种情况没有break时
+		path:类路径,源文件路径不存在时
+		serial:可序列化类没有定义serialVersionID
+		finally:任何finally子句不能正常执行时的警告
+		all:关于以上所有情况的警告
+
+自定义注解的语法
+	使用@interface关键字
+	public @interface 注解名(){}
+	就相当于用@interface关键字来定义一个类
+	
+	在这个类中,定义注解的属性  作用:将原来写在配置文件中的信息,可以通过注解的属性进行描述
+	定义属性的基本语法: 类型 属性名();
+	注意:属性的类型只能是:基本数据类型,String,class,枚举,注解类型以及以上类型的一维数组
+	使用的时候:@注解名(属性名=xxx) 多个属性用逗号分隔
+
+	设置注解的默认值:
+	类型 属性名() default xxx;  设置了默认值,在使用注解的时候,如果不声明属性的值,就用属性的默认值
+
+	特殊的属性名:
+	String value(); 如果注解中有一个value的属性,在使用注解的时候,可以省略value=  直接写成:@注解名(xxx);
+	注意:只有一个value属性需要制定时,才可以省略value=  如果有别的属性需要指定,就必须要写明value
+
+	String[] value();  只有value属性指定的时候,可以省略value=  @注解名({"1","2"...}) 
+	如果value 字符串数组属性只有一个值,可以写成 @注解名("值"),不用写大括号
+
+元注解
+	用于注解注解的注解就是元注解
+	1.@Retention 注解保留的范围
+		value属性有三个值:
+		RetentionPolicy.SOURCE:注解存在于源文件中
+		RetentionPolicy.CLASS:注解存在于字节码中
+		RetentionPolicy.RUNTIME:注解存在于运行时
+
+	2.@Target  注定使用的位置
+		value属性的取值:
+		ElementType.TYPE:接口、类、枚举、注解
+		ElementType.FIELD:字段、枚举的常量
+		ElementType.METHOD:方法
+		ElementType.PARAMETER:方法参数
+		ElementType.CONSTRUCTOR:构造函数
+		ElementType.LOCAL_VARIABLE:局部变量
+		ElementType.ANNOTATION_TYPE:注解
+		ElementType.PACKAGE:包   
+ 
+	3.@Documented  被该元注解修饰的注解会被javadoc工具提取成文档  即文档注释中能看到该注解
+
+	4.@Inherited :被该元注解修饰的注解将具有继承性  某个类被该元注解修饰的注解修饰了,那么他的子类也具有该注解
+
+servlet3.0新规范
+	基本要求:jdk6.0以上,tomcat7.0以上
+
+	1.利用注解代替web.xml配置文件
+	@WebServlet:用于替代web.xml文件配置servlet   在里面写上字符串的映射虚拟路径,即servlet-mapping里的url-pattern
+	该属性是value 所有只指定该属性时可以省略value=  还有一个urlPattern属性和value属性作用一样
+	其他主要属性：
+	loadOnStartup：相当于配置servlet时的<load-on-startup>标签
+	initParams:初始化参数,类型是WebInitParam注释数组
+		
+	@WebInitParam注释有两个必要属性,name和value   用于配置servlet和filter的初始化参数
+
+	@WebFilter:用于替代web.xml文件,配置filter   value属性和urlPattern属性相当于<url-pattern>标签
+	其他属性:
+	initParams:初始化参数,类型为WebInitParam注解类型的一维数组
+
+	@WebListenser:用于替代web.xml文件注册listenser监听器
+

@@ -1,0 +1,260 @@
+DOM的概述
+	document object model 文档对象模型
+	document是最顶层的对象
+
+	文档：HTML页面
+	文档对象：页面中的元素
+	文档对象模型：定义  为了能让JS程序去操作页面中的元素
+
+	DOM将整个页面看做一个树状对象。每一个标签被看做一个节点
+	同时DOM定义了很多方法来操作这个树中的每一个节点
+	DOM中的节点类型有12种：包括元素节点、文本节点等
+
+	属性：
+	childNodes		子节点列表集合。浏览器兼容性问题，不推荐使用
+	nodeType		当前元素的节点类型   1：元素节点  2：属性节点  3：文本节点 等
+	attributes		元素的属性列表集合
+	children		只包含元素类型的子节点集合
+	fristChild		元素的第一个子节点   有浏览器兼容问题
+	fristElementChild	标准浏览器下获取第一个元素类型的子节点，非标准浏览器没有该属性
+	lastChild		元素最后一个子节点
+	lastElementChild	最后一个元素类型的子节点
+	nextSibling		下一个兄弟节点
+	nextElementSibling	下一个元素类型的兄弟节点
+	previousSibling		上一个兄弟节点
+	previousElementSibling	上一个元素类型的兄弟节点
+	parentNode		获取当前节点的父节点
+	offsetParent		离当前元素最近的有定位属性的父节点，默认为body。ie7以下如果有定位，则是html，没有定位是body
+	offsetLeft/offsetTop	当前元素与定位父级的距离，没有定位父级。ie7以下是html。其他浏览器是body
+	style.width		样式宽
+	clientWidth		样式宽+padding：可视区宽
+	offsetWidth		占位宽：可视区宽+border
+
+动态创建元素
+	createElement（标签名称）	创建元素
+
+	元素.innerHTML = aaaaa		给新元素添加内容
+
+	父级元素.appendChild（要添加的元素）	将元素添加到父类元素的子元素，追加，添加到最后
+	父级元素.insertBefore（新元素，指定元素）	在指定元素前添加一个新元素，在ie下，如果指定元素不存在则会报错
+							在其他浏览器下，如果指定元素不存在，则会以appendChild的方法插入
+	
+	父级元素.removeChild（要删除的元素）		删除元素
+
+	父级元素.replaceChild（新节点，被替换的节点）	替换元素
+
+	这些方法都可以操作动态创建出来的元素，也可以操作已有的元素
+
+表单操作
+	在表单中，由于表单要提交信息必须要name属性，可以通过name获取元素
+
+	事件：onchange：当值发生改变时触发
+	不同的控件触发的情况不一样
+
+	text、textarea  光标离开时。如果内容改变会被触发
+	radio（单选项）多个是一组时，name属性必须一样
+	checkbox/radio  标准浏览器改变时触发，非标准浏览器只改变且焦点离开后触发
+	select	选择项改变就触发
+
+	checkbox/radio  有checked属性，标志元素是否被选中
+	select		有selected属性，标志选项是否被选中
+
+	onsubmit事件：当提交表单时触发。return false就不会提交（可以检测填写的内容，不合法就不提交）
+
+	onrest事件：当表单重置时触发
+
+	alert（）弹出一个对话框
+	confirm（）弹出一个选择对话框，选择确定返回true，选择取消返回false
+
+BOM
+	Browser Object Model  浏览器对象模型
+	window对象。   onload事件
+
+	open(url，打开方式)方法   打开一个页面
+	如果url为空，默认打开一个空白页面
+	如果打开方式为空，默认打开一个新窗口
+
+	close方法   关闭窗口   该方法不同的浏览器效果不一样
+
+	属性：
+	window.navigator.userAgent    浏览器信息
+	location		浏览器地址信息（地址栏上的内容）
+
+	window.location.href	url
+	window.location.search	url？后面的内容
+	window.location.hash	url#后面的内容
+
+	document.documentElement.clientWidth/clientHeight	窗口可视区的宽和高
+	document.documentElement.scrollTop/scrollLeft		窗口滚动距离（滚动条滚动过得距离，可视区顶部距离页面顶部的距离）
+	scrollHeight/scrollWidth		内容的高或宽
+	offsetHeight/offsetWidth		文档的高或宽
+
+	事件：
+	onscroll	当滚动条滚动时触发
+	onresize	当窗口大小发生改变时触发
+
+焦点事件
+	
+	onfocus：当元素获取到焦点时触发
+	onblur：当元素失去焦点时触发
+
+	焦点：使浏览器能够区分用户输入的对象，当一个元素有焦点时，那么他就可以接收用户的输入
+	我们可以通过一些方式给元素设置焦点：
+	1.点击
+	2.tab键
+	3.js
+
+	不是所有元素都能够有焦点，只有能够响应用户操作的元素才能有焦点
+
+	obj.focus（） 给指定的元素设置焦点的方法
+	obj.blur（）取消指定元素的焦点
+
+	obj.select（）选择指定元素的文本内容（全选）只能选择用户能操作的元素
+
+event对象
+	event：事件对象
+	当一个事件发生的时候，当前发生这个事件的对象的详细信息会被保存在event对象中，供我们需要的时候调用
+
+	用来获取鼠标位置、键盘按键等
+
+	事件函数：事件调用的函数。一个函数是不是事件对象，不是在定义的时候决定的，而是取决于是否是通过事件调用的该函数
+
+	兼容问题
+	ie/chrome：event对象是一个内置的全局对象
+	标准下：事件对象是通过事件函数的第一个参数传入
+
+	clientX[Y]:当一个事件发生的时候，鼠标到页面可视区的距离，距离可视区左边和上边的像素值
+
+事件冒泡
+	
+	当一个元素接收到事件的时候，会把它接收到的事件传给他的父级，这个机制就称为事件冒泡
+	
+	事件函数绑定：给对象加事件处理函数
+
+	阻止冒泡：在当前要阻止冒泡的事件函数中调用 event.cancelBubble = true；
+	只能阻止当前对象的当前事件的冒泡
+
+事件绑定
+	方式一：
+	对象.事件 = function；
+
+	使用第一个方式，给同一个对象的同一个事件绑定不同函数时
+	如果使用方式一，那么第二次绑定会覆盖第一次绑定的函数
+
+	事件绑定的方式二：给一个对象的同一个事件绑定多个不同的函数
+
+	兼容问题
+	ie：obj.attachEvent（事件名称，事件函数）
+	标准：obj.addEventListener（事件名称，事件函数，是否捕获）；
+
+	是否捕获：默认值为false    false：冒泡   true：捕获
+
+	两个方法的区别：
+	1.attachEvent没有捕获
+	2.事件名称有on
+	3.事件函数执行的顺序：  标准ie：正序   非标准ie：倒序
+	4.this指向window
+
+	addEventListener方法有捕获，
+	事件名称没有on，
+	事件执行顺序是正序的
+	this指向触发该事件的对象
+
+	call（）方法：函数下的一个方法。可以用来调用函数
+	fn1() ==fn1.call（）；
+	call（）方法的第一个参数可以改变函数执行过程中的内部this指向
+	从第二个参数开始，就是函数原来的参数列表
+	如果第一个参数为null，那么this就指向默认的对象
+
+	事件绑定的取消
+	通过方式一绑定的：直接对事件赋值为null
+
+	通过方式二绑定的
+	ie：obj.dettachEvent（事件名称，事件函数）
+	标准浏览器：obj.removeEventListener（事件名称，事件函数，是否捕获）
+
+事件捕获
+	
+	ie下不能事件捕获。必须要addEventListener方法才能实现事件捕获
+
+	捕获机制的执行顺序与冒泡相反
+
+	冒泡由内向外。捕获由外向内
+
+键盘事件：
+	
+	onkeydown	键盘按下的时候出发
+	onkeyup		键盘按键抬起的时候触发
+
+	event对象的属性
+	event.keyCode	：键盘按键的值   是ASCII码
+
+	event对象下的ctrlKey shiftKey  altKey   属性值为布尔类型   这三个称为功能键
+	当一个事件发生的时候，这三个键若是按下的状态，则返回true，否则返回false
+
+	只有能够接收焦点的元素才能接收键盘事件
+
+	onkeydown事件：如果按下不抬起，那么会连续触发
+
+事件默认行为
+	
+	当一个事件发生时，浏览器会默认做的事情
+
+	阻止时间默认行为：在该行为的事件函数中return false
+
+	oncontextmenu：右键菜单事件，当右键菜单（环境菜单）显示出来时触发
+	可以用return false阻止右键菜单显示，然后用一个自定义的div代替
+	
+阻止事件默认行为
+	通过方式一绑定事件函数。
+	通过在函数中添加return false 来阻止事件默认行为
+
+	通过方式二绑定事件函数
+	通过event下的preventDefault（）方法来阻止事件默认行为
+	
+全局捕获（与事件捕获不一样）
+	
+	setCapture（）方法：设置全局捕获，
+	当给一个元素设置全局捕获后，这个元素会监听后续发生的所有事件
+	当有事件发生时，就会被设置了全局捕获的元素所触发
+
+	releaseCapture（）释放全局捕获
+
+拖拽、碰撞检测、滚动条、拖动边框改变大小
+
+鼠标滚轮事件
+	
+	ie、chrome：onmousewheel  鼠标滚轮滚动时触发
+			通过event对象的wheelDelta属性获取滚轮滚动方向，值是数字类型
+			向上：120	向下：-120
+
+	ff：DOMMouseScroll   必须用addEventListener绑定事件函数
+			event.detail属性  上：-3    下：3
+
+cookie：
+	cookie用于存储数据
+	当用户访问了某个网页时，可以通过cookie向访问者的电脑存储数据
+
+	1.不同的浏览器存放cookie的位置不一样，且不能通用
+	2.cookie的存储是以域名的形式进行区分的
+	3.cookie的数据可以设置名字的
+	4.一个域名下存放的cookie的个数是有限制的，不同的浏览器限制个数不一样
+	5.每一个cookie存放内容的大小是有限制的，不同的浏览器的限制也不同
+
+	cookie的存储形式：
+	document.cookie = ‘name = 值’
+
+	通过document.cookie来获取当前网站的cookie时，得到的是字符串的形式
+	包含的是当前域名下的所有cookie，以键值对的形式
+
+	要长时间储存cookie，需要在设置cookie时同时给他设置一个过期时间
+	cookie默认是临时存储的，当关闭浏览器时，他会自动销毁
+
+	设置过期日期的方式
+	document.cookie = ‘name = 值；expires = 时间’
+	注：时间必须是字符串形式。 日期对象.toGMTString（）；
+
+	在存储一些字符时可能会存储不了，所以内容一般进行编码存放
+
+	encodeURI('内容')  编码方法
+	读取的时候进行解码：decodeURI（‘内容’）

@@ -1,0 +1,100 @@
+概述
+	ServletRequest和ServletResponse接口
+	HttpServletRequest和HttpServletResponse接口
+
+	web服务器受到客户端的http请求,会针对每一次请求.
+	分别创建一个用于代表请求的request对象,和代表响应的response对象
+	request对象和response对象既然代表请求和响应,
+	那么要获取客户机提交来的数据,只需要找request对象即可
+	要输出数据,只需要找response对象即可
+
+HttpServletResponse
+	包含多个字段,分别表示不同的状态码
+	常用方法:
+	addHeader addDataHeader addIntHeader
+	setHeader setDataHeader setIntHeader
+	set方法:没有该头字段时进行添加,已有该头字段时进行修改
+	add方法:无论有没有,都进行添加
+
+	setStatus(int sc) sendError(int sc)
+	设置状态码,setStatus可以设置任何状态码,而sendError方法只能设置错误的状态码
+
+	继承父接口ServletResponse的方法
+	flushBuffer()	刷新缓冲
+	getBufferSize()		获取缓冲区大小
+	getCharacterEncoding()	获取字符编码方式
+	getLocale()	获得区域信息
+	getOutputStraem()	获取字节输出流
+	getWriter()	获取字符输出流
+	isCommitted()	是否已经响应 响应过返回true
+	reset()		清空头信息和状态码
+	resetBuffer()	清空头信息和状态码以及响应体
+	setBufferSize(int size)	设置缓冲区大小
+	setContentLength()	设置响应体的长度
+	setContentType()	设置类型
+
+	向浏览器发送中文数据时,会出现编码问题
+	解决方案:
+	1.通过更改浏览器的编码方式  (不可取)
+	2.通过设置响应头告诉客户端编码方式:
+	response.setHeader("Content-Type","text/html;charset=UTF-8");
+	3.通过HTML的<mate>标签设置
+	在输出中文数据前,先用write方法加上<mate>标签
+	out.write("<mate http-equiv="Content-Type" content="text/html;charset=UTF-8">".getByte("UTF-8"));
+	4.使用setContentType()方法
+	response.setContentType("text/html;charset=UTF-8");
+
+	用字符流向浏览器发送中文数据时
+	sun规定的Servlet规范要求:字符输出流的默认码表为ISO-8859-1码表
+	可以通过response.setCharacterEncoding("码表")来设置编码方式
+	可以通过上面的三种方式将编码方式告诉浏览器,以解决编码问题
+
+	使用setContentType()方法,在字节流中只能通知客户端解码方式
+	但是在字符流中,该方法可以设置字符流的编码方式
+	所以使用该方法可以不用setCharacterEncoding()方法设置字符流编码方式该
+
+	输出整数时.最好是以字符串的形式.
+	否则如果输出一个int类型的值,如97,在客户端会自动查码表,显示结果为a
+
+	请求重定向有两种方式:
+	1.设置响应头:Location   值为URL
+	2.使用ServletResponse对象,调用sendRedirect(URL)方法
+
+	细节:
+	1.字符流和字节流不能同时使用,是互斥的,会报错
+	2.通过字符流或字节流输出的数据,并不是直接给浏览器的
+	而是把数据写到response对象的缓存中,服务器从缓存中读取数据
+	按照HTTP协议的响应格式输出给浏览器
+	3.如果用response对象获取到输出流,没有关闭,服务器会自动来关闭
+
+HttpServletRequest
+	常用方法：
+	获得客户机信息的方法：
+	getRequestURL方法返回客户端发出请求时的完整URL。     
+	getRequestURI方法返回请求行中的资源名部分。     
+	getQueryString 方法返回请求行中的参数部分。     
+	getRemoteAddr方法返回发出请求的客户机的IP地址      
+	getRemoteHost方法返回发出请求的客户机的完整主机名     
+	getRemotePort方法返回客户机所使用的网络端口号     
+	getLocalAddr方法返回WEB服务器的IP地址。     
+	getLocalName方法返回WEB服务器的主机名      
+	getMethod得到客户机请求方式 
+
+	获得客户机请求头 
+	getHeader(string name)方法      
+	getHeaders(String name)方法      
+	getHeaderNames方法
+
+	获得客户机请求参数(表单)：
+	getParameter(name)方法
+        getParameterValues（String name）方法
+        getParameterNames方法 
+        getParameterMap方法
+
+	表单数据获取：
+	1.如果表单输入域type为radio和checkbox，如果用户不选，则不向服务器传递数据
+	2.如果选择了radio或checkbox其中的一项，看他们有没有value值，如果有，则传value信息，如果没有，值为on
+
+	请求转发
+	request.getRequestDispacther("/test.jsp").forword(request,response);
+	转发是服务器行为，而重定向是客户端向服务端发送新的请求

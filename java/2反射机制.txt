@@ -1,0 +1,100 @@
+JAVA反射机制概述
+	
+	JAVA反射机制就是在运行的状态中，对于任意一个类，都能够知道这个类的所有属性和方法
+	对于任意一个对象。都能够调用他的任意一个方法和属性
+	这种动态获取的信息以及动态调用对象的方法的功能称为java的反射机制
+
+	动态获取类中信息，就是java的反射。
+
+反射的应用场景
+	
+	一个应用程序做完可以独立运行之后。一般会对外提供一个接口
+	这个接口用于该应用程序的功能扩展
+	应用程序想要加载实现该接口的字节码文件想要并获取其中的内容
+	要么在该应用程序的源代码中new一个对象调用其方法
+	要么使用反射技术。将信息写进xml配置文件中。
+
+	例如：Tomcat提供了处理请求和应答的方式，
+	但是由于具体的处理动作不一定。
+	所以对外提供了一个servlet接口。
+	由开发者来实现该接口以处理具体的请求和具体的应答处理
+	然后将实现该接口的class文件标签写入配置文件web.xml中
+
+class对象
+	
+	在java中有Class类用于描述字节码文件
+	字节码对象可以通过其方法获取到该字节码文件中的所有内容
+	如类名、字段、构造方法、一般方法等
+	反射机制就是依靠Class类完成的
+	想要对一个Class文件进行解剖。只需要获取到该类的字节码文件对象即可
+
+获取Class对象的方式
+	
+	方式一：Object类的getClass（）方法
+	想使用这种方式必须要明确具体的类，并且创建对象调用getClass方法
+
+	方式二：数据类型的静态属性.class
+	相对方式一要简单一些，但是还是要明确类，用到其静态成员
+	扩展性不强
+
+	方式三：通过Class类中的forName（）方法
+	只需要传入类名的字符串，就可以获取该类的Class对象
+	扩展性更强
+
+获取Clsaa中的构造方法
+	
+	创造新对象原来使用new关键字
+	根据被new的类名寻找该类的字节码文件，并将其加载进内存
+	创建该字节码文件的Class对象。然后在创建该类对应的对象
+
+	现在用class类的forName（String）方法可以得到字节码文件对象
+	在通过该对象的newInstance方法获取一个该类的新实例
+	该方法相当于空参构造方法
+
+	如果该类没有空参构造方法，
+	会产生IstantiationException异常
+	如果该类的空参构造方法是private访问权限的
+	会产生IllegalAccessException异常
+
+	如果要使用含参数的构造方法。
+	Class类提供getConstructor（paramterTypes）方法
+	可以获取指定的构造方法对象，该方法只能用于获取公共权限构造方法
+	将参数数据类型的字节码文件对象作为参数传递
+	即paramterTypes为  数据类型.calss
+	另外：getDeclaredConstructor方法可以获取任意访问权限的构造方法对象
+
+	然后使用Constructor类的newInstance方法可以将参数传入
+	相当于使用含参数的构造方法进行对象的初始化
+
+获取Class中的字段
+	
+	1、getField（name）方法
+	可以通过字段名获取该字段的对象
+	2、getFields（）方法
+	可以获取包含该类所有公共字段对象的数组
+	以上两个只能获取公共权限的字段
+
+	如果要获取其他权限的字段对象使用
+	getDeclaredField（name）或getDeclaredFields（）
+
+	然后通过Field类的get（obj）方法
+	可以获取指定对象该字段的值
+	set（obj，int）可以设置指定对象该字段的值
+
+	暴力访问：
+	由于Field、Constructor、Method类的父类为AccessibleObject
+	该类自动检测访问权限。所以不能直接访问私有权限的字段
+	这时要使用setAccessible（boolean flag）方法设置访问权限
+	flag为true则可以访问（不建议使用该方式访问）
+
+获取Class中的方法
+	
+	getMethods（）获取所有公共方法对象的数组
+	getMethod（方法名，参数列表的字节码Class对象）获取指定的公共方法对象
+	getDeclaredMethod（）获取本类的所有方法
+	getDeclaredMethod（方法名，参数列表.Class）本类指定方法
+
+	Method类中的invoke方法
+	invoke（obj，参数）用指定对象调用该方法
+	为空参时使用null，有参数则将参数写入
+

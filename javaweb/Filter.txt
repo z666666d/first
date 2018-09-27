@@ -1,0 +1,38 @@
+Filter(过滤器)
+	web开发人员通过Filter技术，对web服务器管理的所有web资源进行拦截，从而实现一些特殊的功能
+
+	例如，实现URL级别的权限访问控制、过滤敏感词汇、压缩响应信息等一些高级功能
+	
+	Servlet中提供了Filter接口，实现这个接口的java类，就就称为过滤器
+	通过过滤器可以实现用户在访问某个目标资源之前，对访问请求和响应进行拦截
+
+编写步骤
+	a.编写一个类实现javax.servlet.Filter接口（过滤器类）
+	b.在web.xml文件中进行配置，声明要拦截的资源
+	<filter>标签:子标签<filter-name>和<filter-class>
+	<filter-mapping> 子标签:<filter-name>和<url-pattern>
+	过个过滤器的执行顺序是按照在web.xml中<filter-mapping>出现的顺序
+
+	c.三个方法:
+	init(FilterConfig)初始化方法:在应用加载的时候就完成了初始化
+	在web.xml文件中加上<init-param>标签子标签<param-name>和<param-value>
+	设置的参数会以FilterConfig对象的形式传递给init方法
+	在init方法中加上this.filterConfig = filterConfig
+	
+	这样就可以在doFilter方法中用filterConfig对象调用getInitParameter(String name)方法获取指定的参数值
+
+	destroy():销毁过滤器对象
+	doFilter():过滤器执行拦截的方法,每一次访问Filter在web.xml指定的web资源,都会执行该方法
+	在doFilter方法中,进行请求拦截和响应拦截,而chain.doFilter()方法表示放行,允许访问web资源
+	如果不调用chain.doFilter(request,response)方法,就会一直处于拦截状态
+
+	过滤器配置<dispatcher>标签
+	默认情况为请求:REQUEST
+	这样如果是通过转发,动态包含,错误等访问web资源,就不会经过过滤器
+
+	这时就要用到<dispatcher>标签来配置:
+	REQUEST :请求
+	FORWARD:转发
+	INCLUDE:动态包含
+	ERROR:错误  注意:这里的错误是指在web.xml中用<error-page>标签设置的错误
+		用page指令的 errorpage属性设置的错误页面是通过转发访问的

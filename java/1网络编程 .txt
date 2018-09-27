@@ -1,0 +1,271 @@
+两种网络模型
+	
+	OSI（Open System Interconnection开放系统互联）参考模型
+		该模型共分为7层
+		物理层：物理设备标准。用于传输比特流。比特
+		数据链路层：从物理层接收数据进行MAC地址封装。帧
+		网络层：将从下层接收的数据进行IP地址的封装。数据包
+		传输层：定义传输数据的协议和端口号。将数据进行分段和传输。段
+		会话层：通过传输层建立数据传输通路
+		表示层：对数据进行解释、加密和解密，压缩和解压缩等
+		应用层：主要是一些终端应用
+
+	TCP/IP模型
+		分为四层
+		主机至网络层：物理层+数据链路层
+		网际层：网络层
+		传输层：传输层
+		应用层：应用层+表示层+会话层
+
+网络通讯的要素
+	
+	1、IP地址：InetAddress
+		网络中设备的表示，4个字节组成
+		不易记忆。可用主机名
+		本地回环IP：127.0.0.1
+
+	2、端口号
+		用于标识进程的逻辑地址，标识不同的进程
+		有效端口号：0~65535，其中0~1024为系统使用或保留的端口
+
+	3、传输协议
+		通讯的规则
+		常见传输协议：TCP、UDP
+
+		UDP
+			将数据以及源和目的封装在数据包中，不需要建立连接
+			每个数据包的大小在64KB内
+			因为无连接，所以是不可靠协议
+			因为不需要建立连接，所以速度快
+
+		TCP
+			建立连接，形成传输数据的通道
+			在连接中进行大数据量的传输
+			通过三次握手完成连接，是可靠的协议
+			必须建立连接，效率稍低
+
+IP对象
+	java.net包InetAddrress类
+	
+	方法
+		1、InetAddress   getByName（String host）
+		将主机名或IP地址以字符串的形式作为参数传递，获取该设备的IP对象
+
+		2、String   getHostAddress（）
+		获取该IP对象的地址字符串
+
+		3、String   getHostName（）
+		获取次IP对象的主机名
+
+		4、InetAddress[]   getAllByName（String host）
+		当有多个IP地址时使用此方法。通过主机名获取一个IP对象数组
+
+域名解析
+	IP地址不易记忆。所以一般都是使用域名，在通过DNS服务器（域名解析服务器）获取指定域名的IP地址
+	再通过获取到的IP地址进行访问
+	在windows/system32/drivers/etc下的hosts文件中。可以设置本地域名解析
+	在域名解析时。先在本地域名解析文件进行查找，没有的话在访问DNS服务器查找
+
+Socket（套接字）
+	Socket是为网络服务提供的一种机制
+	通信两端都有Socket，网络通信其实就是在Socket之间通信
+	数据是在两个Socket之间通过IO传输
+
+UDP协议
+	DatagramSocket类
+	该类用来表示用于发送和接收数据报包的套接字
+	数据报套接字式包投递服务的发送或接收点
+
+	DatagramPacket类
+	该类表示数据报包
+	数据报包用来实现无连接包投递服务，不对包投递做出保证（UDP不可靠）
+
+	建立UDP发送端的思路
+	1、建立UDO的Socket服务
+	2、将要发送到数据封装到数据包中
+	3、通过UDP的Socket服务的send方法将数据包发送出去
+	4、关闭Socket服务
+	
+	建立UDP接收端的思路
+	1、建立UDP Socket服务，因为要接收数据，所以在建立时必须要明确一个端口号。
+	2、创建数据包，用于存储接收到的数据。方便用数据包对象的方法解析这些数据
+	3、使用Socket服务的receive方法将接收到的数据存储到数据包中
+	4、通过数据包的方法解析数据包中的数据
+	5、关闭Socket服务。
+
+TCP协议
+	Socket类
+	该类为客户端套接字
+
+	ServerSocket类
+	该类为服务端套接字
+
+	建立TCP通信，客户端发数据到服务端的思路
+	1、创建TCP客户端的Socket服务。使用的是Socket对象
+	   由于客户端建立需要连接服务端，所以该对象一建立就应该明确目的地
+	2、如果连接建立成功，就说明数据传输通道已经建立
+	   该通道就是Socket流，是底层建立好的，既能输入又能输出
+	   可以用Socket对象来获取输入或输出流对象
+	   getInputStream（）和getOutputStream（）方法用于获取该套接字的输入或输出流对象
+	3、使用输出流，将数据写出。
+	4、关闭Socket资源
+
+	建立TCP服务端的思路
+	1、创建TCP服务端的Socket服务。用ServerSocket对象
+	2、服务端必须对外提供一个端口，否则客户端无法连接
+	3、获取连接过来的客户端对象  用ServerSocket对象调用accept方法获取，
+	4、通过客户端对象获取Socket流读取客户端发来的数据。
+	5、关闭资源。关客户端，关服务端
+
+	TCP通信中常见问题：
+	
+		两端同时等待的情况：
+		有阻塞式方法，但缺少结束标记会导致服务端和客户端同时进入等待状态。
+		socket流没有刷新。导致服务端无法收到客户端的数据。
+
+客户端和服务端
+	
+	客户端：
+	1、建立Socket对象
+	2、通过Socket对象的getOutputStream方法获取Socket输出流
+	3、用Socket输出流将数据发送到服务端
+	4、用Socket对象的getInputStream方法获取Socket输入流
+	5、用Socket输入流获取服务端发送来的数据并进行处理
+	6、关闭资源、关闭客户端Socket服务
+
+	服务端
+	1、建立ServerSocket对象
+	2、通过ServerSocket对象的accept获取连接服务器的客户端套接字对象
+	3、用获取到的Socket对象的getInputStream方法获取Socket输入流
+	接收客户端发送来的数据
+	4、处理客户端发送来的数据
+	5、用Socket对象的getOutpurStream方法获取Socket输出流，将反馈数据发送给客户端
+	6、关闭资源、关闭客户端、关闭服务端
+
+	一般一个服务端不可能只对应一个客户端。
+	这时就要用多个线程并发处理多个客户端发送来的请求
+	在创建ServerSocket服务后。
+	将获取客户端Socket对象以及后续的处理代码放进循环中
+	即上面服务端的2、3、4、5步放入一个无限循环中
+	并且在获取一个Socket之后，就new一个新的线程处理
+	然后主线程循环到accept方法，进入阻塞状态。等待下一个客户端
+	
+常见的客户端与服务端
+	
+	最常见的客户端：浏览器：如IE浏览器
+	最常见的服务端：服务器：如Tomcat
+
+	
+	浏览器客户端发送给服务端的请求：
+
+	GET / HTTP/1.1  请求行  请求方式  /myweb/1.html  请求的资源路径   http协议版本。
+	请求消息头 . 属性名：属性值
+	Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, 
+	application/vnd.ms-excel, application/vnd.ms-powerpoint, application/msword, */*
+	Accept: */*     //支持的文件类型
+	Accept-Language: zh-cn,zu;q=0.5  //支持的语言
+	Accept-Encoding: gzip, deflate   //支持的压缩类型
+	User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; InfoPath.2)
+	Host: 192.168.1.100:9090     //主机IP记忆端口
+	//Host: www.huyouni.com:9090
+	Connection: Keep-Alive
+	//空行
+	//请求体。
+
+
+	服务端返回的应答：
+
+
+	HTTP/1.1 200 OK   //应答行，http的协议版本   应答状态码   应答状态描述信息
+
+	应答消息属性信息。 属性名：属性值
+	Server: Apache-Coyote/1.1
+	ETag: W/"199-1323480176984"
+	Last-Modified: Sat, 10 Dec 2011 01:22:56 GMT
+	Content-Type: text/html
+	Content-Length: 199
+	Date: Fri, 11 May 2012 07:51:39 GMT
+	Connection: close
+	//空行
+	//应答体。
+	<html>
+		<head>
+			<title>这是我的网页</title>
+		</head>
+
+		<body>
+
+			<h1>欢迎光临</h1>
+
+			<font size='5' color="red">这是一个tomcat服务器中的资源。是一个html网页。</font>
+		</body>
+
+
+	</html>
+
+	
+URL和URLconnection
+	
+	URL类代表一个统一资源定位符
+	
+	URL属于URI:统一资源标识符
+
+	统一资源定位符即指向互联网“资源”的指针
+	包含：协议、IP、端口、访问资源路径、查询部分等
+	
+	格式:scheme://host.domain:port/path/filename
+	scheme:定义因特网服务的类型。
+	http	文本传输协议  普通网页,不加密
+	https	安全超文本传输协议  安全网页,加密所有信息交换
+	ftp	文件传输协议   用于文件的下载和上传
+	file	文件   打开本地文件
+
+	host:定义主机名   http协议的默认主机式www
+	domain:定义域名
+	:port:定义端口号   http默认端口号是80
+	path:定义服务器上的路径    如果省略则访问的文件必须在网站的根目录
+	filename:定义文档/资源名称
+	
+	通过URL对象的方法可以获取URL的信息
+	如getFile 获取文件名
+	getHost  获取主机名
+	getPath	 获取路径部分
+	getPort  获取端口号
+	getProtocol  获取协议名称
+	getQuery  获取查询部分
+	等方法
+
+	URL对象其实包含Socket对象
+	可以用openStream方法获取Socket输入流得到的服务端的数据
+
+	使用openConnection方法可以得到一个URLConnection对象
+	URLConnection对象可以对服务端发送来的应答头进行解析
+	通过URLConnection对象的方法可以获取应答各个头字段对应的值
+
+
+常见网络结构
+	网络结构，
+	1,C/S  client/server
+		
+		特点：
+			该结构的软件，客户端和服务端都需要编写。
+			可发成本较高，维护较为麻烦。
+			
+		好处：
+			客户端在本地可以分担一部分运算。
+
+
+
+
+	2,B/S  browser/server
+		特点：
+			该结构的软件，只开发服务器端，不开发客户端，因为客户端直接由浏览器取代。 
+			开发成本相对低，维护更为简单。
+		缺点：所有运算都要在服务端完成。
+		
+
+
+
+
+
+

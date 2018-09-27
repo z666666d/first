@@ -1,0 +1,116 @@
+把某个元素移除视线的方法
+	1.display：none		显示为无，这样不能用js获取他的宽和高
+	2.visibility：hidden	隐藏
+	3.width/height		修改元素的宽和高,改为0就看不见了
+	4.透明度 opacity	修改透明度也可以.
+	5.修改left/top值	将整个元素平移出去
+	6.拿一个和背景颜色一样的div盖住
+
+JS中获取元素的方法
+	1.通过ID来获取元素
+		document.getElementById('id');
+	2.通过标签来获取
+		document.getElementsByTagName('li');
+		这个方法可以被对象调用,获取某个对象内的该标签元素
+	3.通过name属性来获取
+		document.getElementsByName("domName");
+		注:IE中通过该方法还会获取到id与指定name值相同的元素
+	4.通过class来获取
+		document.getElementsByClass('class');
+		注：IE8及以下版本的浏览器未实现该方法
+
+	获取到的对象名，如果是一个用o开头，如果是多个，用a开头
+	除了id，其他都获取到的是一个对象集合，可以用操作数组的方法对其进行操作
+	使用时必须加上[],否则不能进行操作：
+	var aLi = document.getElementsByTagName('li')[0];
+
+		
+
+JS中的事件
+	鼠标事件
+		onclick		点击
+		onmouseover	鼠标移入
+		onmouseout	鼠标移出
+		onmousedown	鼠标点下
+		onmouseup	鼠标松开
+		nomousemove	鼠标在元素上移动
+		......
+
+	键盘事件
+	系统事件
+	表单事件
+	自定义事件
+
+添加事件的方式
+	元素.事件
+
+JS属性操作的注意事项
+	1.JS中不允许出现-  
+	如：font-size要改写成fontSize
+	padding—top改写成paddingTop
+
+	2.class为JS的保留字，要修改class的属性值。不能用元素.class
+	而要用  元素.className
+	在用js改变样式时。如果要改变的属性很多。那么就可以在样式表中设置一个class样式
+	在触发事件后。将元素的class修改样式表中设置的class即可
+
+	3.判断
+	所有的相对路径地址都不要拿来做判断
+	颜色值也不要拿来做判断(浏览器兼容问题)
+	innerHTML也不要拿来做判断
+
+	4.表单的type属性更改   ie678浏览器不支持
+
+	5.浮动修改的时候IE(styleFloat)  非IE(cssFloat)
+	这个时候可以设个class,直接去修改className就行了
+
+	6.JS里面可以把 .  换成[]  点后面的值不能改变,[]里的字符串可以更改
+
+cssText格式对属性的操作
+	在JS中，可以直接用document.元素.style.属性对元素样式进行更改
+	也可以用document.元素.style.cssText 对元素进行更改
+	cssText对同一元素写了两次cssText,那么第二次会直接覆盖第一次的
+
+自定义属性
+	
+	1.添加boolean型变量	同样的事件,根据标志的不同进行不同的操作
+	2.添加索引值  与数组或页面上其他元素形成对应关系
+	方便对元素的样式操作
+
+JS的作用域
+	
+	js在逐行解析代码之前,会先进行预解析
+	根据var function 参数 进行查找
+	所有变量在代码未正式运行之前都会自动赋值:undefined(未定义)
+	所有函数在未运行代码之前会是整个函数块
+
+	在预解析时,遇到同名的函数和变量.那么会保存函数
+	如果前后两个函数同名.那么会保存后一个函数
+
+	在script标签中定义的是全局变量、全局函数
+	由上自下   下一个script标签可以读到上一个script标签的内容
+
+	在函数中定义的是局部变量
+	由内向外   如果变量在函数内部没有定义，那么会去外面找该变量
+	函数参数相当于定义了一个局部变量
+
+	在JS中if和for这些都不是作用域。里面定义的都是全局变量和全局函数
+	但是火狐浏览器在预解析的时候，对里面的函数申明不会进行预加载
+	所以，一般情况下，尽量不要在if和for里面定义全局变量和全局函数
+
+getComputedStyle方法和currentStyle方法
+	
+	获取元素的样式属性值
+	getComputedStyle（）获取浏览器计算后的样式，但是IE678浏览器不兼容
+	这样可以用currentStyle（）方法。获取元素当前样式。但是标准浏览器不兼容
+
+	注意：不要用来获取复合样式，获取单一样式也尽量不要拿来作判断
+	不要获取未设置的样式，会出现不兼容的情况
+
+定时器
+	设置定时器
+	var timer= setInterval（函数，毫秒）；//设置一个定时器每隔一定的毫秒值重复执行函数
+	clearInterval（timer）；清除某个定时器。让定时器停止
+
+	var timer = setTimeout（函数，毫秒）；只执行一次
+	clearTimeout（timer）；停止定时器

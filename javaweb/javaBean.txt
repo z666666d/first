@@ -1,0 +1,36 @@
+概述:
+	JavaBean时一个遵循特定写法的java类,具有的特点:
+	必须有无参的的构造方法
+	所有字段都定为私有的
+	提供公有的get和set方法
+	一般要实现java.io.serializable接口(只有实现该接口的对象才能放进session对象进行持久化)
+	一定要符合java命名规范
+
+	应用场景:
+	JavaBean通常用于封装数据,对于遵循以上规范的JavaBean组件,其他程序可以通过反射技术实例化JavaBean对象
+	并且通过反射那些遵守命名规范的方法,从而获取JavaBean的属性,进而调用其属性保存数据
+	就是用来传递数据的
+
+JavaBean的动作元素
+	<jsp:useBean>:用于在JSP页面中查找或实例化一个JavaBean组件
+	作用：用于在指定域范围内查找指定名称的JavaBean对象，找到了就直接使用；没有找到，创建一个，并放到指定的域范围内。
+	属性：
+		id：必须的。JavaBean的名称
+		class:JavaBean的完整类名
+		scope：域范围。默认是page范围。可选值：page request session application
+	该标签如果有主题内容,那么主题内容只在创建新对象的时候执行,如果已经有了该对象,就不会执行主体
+	
+	<jsp:setProperty>:用于在JSP页面中设置一个JavaBean组件的属性
+	作用:调用setter方法,还能进行自动类型转换,仅限基本类型
+	属性:
+		property:必须属性,属性名称(只跟setter方法名称有关.与字段名无关)
+		name:必须的,对象名,即jsp:useBean中的id值
+		value:属性的取值.可以是直接量也可以是表达式
+		param:请求参数名,将请求参数的值赋给指定的属性
+		如果属性名和请求参数名相同时,可以使用通配符*   即property="*"  省略param
+
+	<jsp:getProperty>:用于在JSP页面中获取一个JavaBean组件的属性
+	作用:调用JavaBean的getter方法
+	属性:
+		property:属性名称
+		name:对象名

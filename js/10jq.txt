@@ -1,0 +1,170 @@
+jq简述
+	一个优秀的JS库
+	1.简化了JS的复杂操作
+	2.不再需要关心兼容性
+	3.提供了大量实用方法
+
+	特点：
+	1.选择器：模拟了css选择元素，独特的选择表达式以及多种筛选方法
+	2.写法：方法函数化、链式操作、取值赋值合体
+	3.与JS可以共存，不能混用
+
+$()下的一些常用方法
+	
+	1.attr()  用于获取属性或设置属性的方法
+
+	2.filter()  过滤方法,只选择参数中有的元素
+	3.not()    与filter方法相反
+	
+	4.has()    判断是否包含某元素
+
+	5.next()prev() 选择下一个兄弟节点或上一个兄弟节点
+
+	6.find()   查找指定元素下的元素
+
+	7.eq()	一组元素的下标
+
+	8.index()   当前元素在所有兄弟节点中的位置
+
+	9.addclass() removeClass()  添加和删除class
+
+	10.width()	width
+	innerWidth()	width+padding
+	outerWidth()	width+padding+border+margin(true) 参数为true时加上margin
+	JS中获取宽度的方法不能获取隐藏元素的数据,但是JQ中的方法可以
+
+	11.insertBefore() before()  insertAfter() after()
+	appendTo()  append()  prependTo()  prepend()
+	操作节点的方法
+	两组方法的区别:后续操作不一样
+	后续方法操作的对象不一样
+
+	12.remove()   删除节点
+
+	13.on()   off()  添加和关闭事件
+	可以用来添加自定义事件,添加多个事件,给不同的事件绑定不同的函数
+
+	14.scrollTop()   获取滚动条滚动距离
+
+	事件操作:
+	ev	事件对象
+	pageX、pageY   鼠标坐标   相对于页面的坐标 
+	which	键盘的键值（包括鼠标左右键以及滚轮）
+
+	preventDefault()  阻止默认事件的方法
+
+	stopPropagation()	阻止冒泡
+	在事件函数中加return false  代表即阻止默认事件,又阻止冒泡
+
+	one()	用这个方法绑定事件函数,只执行一次
+
+	位置操作:
+	offset()   有两个属性  left和top   到屏幕的距离
+	position()   两个属性:left和top    到有定位的父级的距离(margin的距离不算在内)
+
+	parent():获取父级
+	offsetParent():获取有定位的父级
+
+	val():获取或设置元素的value值
+
+	size():获取元素集合的长度   类似length属性
+
+	each():对元素集合的每一个元素进行操作,相当于用for循环
+	两个参数:第一个代表下标  第二个代表元素
+
+其他基础方法	
+	
+	get()方法
+	实现将JQ转换成JS
+	可以实现JQ和JS的混用
+
+	text()
+	获取文本内容,不会获取标签
+	用html()方法不仅能获取标签中的文本,还会获取标签中的标签
+
+	datach()方法和remove()方法  都是删除节点
+	remove的返回值是这个节点
+	datach返回值会保留这个元素的操作行为
+
+	window.onload = function(){};
+	和$(function(){});的区别
+	$()等DOM加载完就可以执行了
+	相当于$(document).ready(function(){
+	
+	});
+
+JQ的DOM操作
+	parents()  获取当前元素的所有祖先节点  可以用参数进行筛选
+
+	closest() 获取最近的指定祖先节点(包括当前元素自身),参数筛选功能
+
+	siblings()  获取当前元素的所有兄弟节点,参数筛选功能
+
+	nextAll()  prevAll()  后面或前面所有的兄弟节点 也可以写参数进行筛选
+
+	parentsUntil() nextUntil() prevUntil()  参数是指到指定元素截止
+
+	clone()方法 克隆节点    参数为true时,可以复制节点的操作行为
+	单独用appendTo()方法相当于将元素剪切到指定元素的直接点
+	加上clone()方法,相当于将元素复制到指定元素的子节点
+
+	wrap() 给当前元素外面包装上指定元素  元素集合的每一个元素都要包装
+
+	wrapAll() 整体包装  
+
+	wrapInner()  内部包装
+
+	unwrap()  删除包装:相当于删除父级,不包括body元素
+
+	add()  添加组合元素
+	slice()  选择元素集合中的元素 参数为起始和结束角标   包括起始不包括结束
+
+	serialize() 将表单数据串联为一个字符串
+
+	serializeArray() 将表单数据格式化为一个json数组
+
+JQ中的运动
+	animate()方法  
+	第一个参数:运动的属性和值	如{width:300,height:500}
+	第二个参数:时间:运动的快慢
+	第三个参数:运动的形式    默认:swing(慢快慢)   linear(匀速)
+	第四个参数:回调函数 (运动完成后执行)  也可以用链式操作来完成
+
+	stop()方法   阻止运动的方法  默认只会阻止当前运动
+	添加true参数,就会阻止后续的所有运动
+	第二个参数为true,可以立即完成运动  当前运动
+
+	finish()方法   所有运动立即完成
+
+	delay()  延迟方法  参数为时间
+
+	delegate()  事件委托方法
+
+	undelegate()  阻止事件委托
+
+	trigger()  主动触发
+
+	ev.data  ev.target  ev.type  事件对象下的属性
+
+$下的方法(工具方法)
+	$()下的方法.只能给JQ对象使用
+	$下的方法,既可以在JQ中使用,也可以在JS中使用
+
+	type()方法,判断类型
+
+	trim()方法,  去除字符串前后的空格
+
+	inArray('a',arr)方法   类似于indexOf()方法   通过字符获取index
+
+	proxy()  改变this指向
+
+	noConflict()  防止冲突   用$调用该方法,可以将$赋给一个变量
+
+	parseJSON()  把字符串解析成json
+
+	makeArray() 将类数组转成真正的数组   如元素集合,用makeArray转成数组.就可以调用数组的方法进行操作
+
+插件
+	$.extend  扩展工具方法的插件
+
+	$.fn.extend  扩展到JQ对象下的插件形式

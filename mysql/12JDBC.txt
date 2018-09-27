@@ -1,0 +1,474 @@
+q概述
+	JDBC ：Java Data Base Connectivity（Java数据库连接）
+	Java连接数据库的标准，为了简化、统一对数据库的操作
+	JDBC是规范，是抽象层，而数据库驱动是具体的实现
+	
+	JDBC由一些抽象类和接口组成，一般放在java.sql.* 或javax.sql.* 包中
+
+JDBC编码步骤
+	准备：将数据库驱动加入到构建路径中
+	1.加载驱动程序并注册驱动：DriverManager
+	通过DriverManager类下的registerDriver（）方法
+	通过数据库驱动中实现了Driver接口的类new一个对象
+	将new的对象以参数传入该方法完成注册驱动
+
+	2.获取与数据库的连接：Connection
+	通过DriverManager类的getConnection（url，user，password）方法
+	获取到Connection接口的连接对象
+
+	3.得到代表SQL语句的对象，并发送到SQL给数据库：Statement
+	通过得到的Connection连接对象的createStatement（）方法
+	创建一个Statement对象，来讲SQL语句发送给数据库
+	通过Statement对象的方法向数据库发送执行语句
+
+	4.如果有查询结果，得到封装了查询结果的对象：ResultSet
+	如果Statement对象方法发送给数据库的语句有查询结果，将会返回一个ResultSet对象
+
+	5.遍历结果
+	ResultSet对象的指针默认指向第一条的前面
+	通过next（）方法可以使指针下移，且返回一个boolean类型的值  
+	有下一条返回true，没有返回false   可以通过一个while循环来完成对结果的遍历
+
+	6.释放占用的资源
+	通过ResultSet、Statement、Connection中的close（）方法关闭资源
+
+常用接口和类的详解
+	
+	1.DriverManager
+	作用：注册驱动，获得数据库连接
+	注册驱动：
+		DriverManager.registerDriver(new com.masql.jdbc.Driver());
+		这种方式不可取.
+		原因:1.严重依赖具体的数据库驱动,耦合性太高
+		2.这种方式会导致驱动注册两边  在数据库驱动的Driver具体实现中,静态代码块中以及完成了注册
+		所以在类加载的时候就已经进行了注册.
+		所以只需要加载实现了Driver接口的类就可以完成注册
+
+		替代方法:
+		class.forName("com.mysql.jdbc.Driver");
+		可以将字符串放进配置文件,降低了代码的耦合性
+
+	获取数据库连接:
+		使用DriverManager下的getConnection方法,该方法有三种重载形式
+		
+		方式一:
+		static Connection getConnection(url,user,password);
+		url:数据库连接串
+			jdbc:mysql://主机名或IP：端口号/数据库名
+			jdbc:mysql:///数据库名    默认为访问本地,且端口号为默认的3306时,可以简写成这样
+		user:数据库用户名
+		password:数据库密码
+		
+		方式二:
+		getConnection(url,info)
+		将用户名和密码保存到properties配置文件中  key值为user和password
+		可以再mysql连接器中查看各种属性的key值
+
+		方式三
+		getConnection(url)
+		以get方式将user和password写入url中 
+		jdbc:mysql//localhost:3306/数据库名?user=root&password=root
+
+		常用数据库URL写法:
+		Oracle: jdbc:oracle:thin:@localhost:1521:sid
+		Sql Server:jdbc:microsoft:sqlserver://localhost:1433:DatabaseName=sid
+		Mysql:jdbc:mysql://localhost:3306/sid
+
+	2.Connection
+	代表数据库连接,数据库编程中最重要的对象
+	所有与数据库的交互都必须建立在连接的基础上
+	
+	常用方法:
+		createStatement() 创建向数据库发送SQL的statement对象
+		prepareStatement(sql)  创建向数据库发送预编译sql的PrepareStarement对象
+		prepareCall(sql)  创建执行存储过程的callableStatement对象
+		setAutoCommit(boolean autoCommit)  设置事务是否自动提交
+		commit()   在连接上提交事务
+		rollback() 在此链接上回滚事务
+
+	3.Statement
+	代表着SQL语句
+
+	常用方法:
+	ResultSet  executeQuery(sql)   由于要返回一个结果.所有sql只能是数据库查询语句(DQL)
+	int  executeUpdate(sql)   sql必须是数据库操作语句(DML)  INSERT UPDATE  DELETE   或者是没有任何返回内容的数据库定义语句(DDL)
+				该方法的返回值代表语句影响到的行数
+	boolean execute(sql)  可以是任意的SQL语句   有结果返回true  没有结果返回false
+				可以当返回值为true时,调用getResultSet方法获取结果对象
+	addBatch(sql)  将多条sql语句放到一个批处理中
+	executeBatch()  向数据库发送一批sql语句执行
+
+	4.ResultSet
+	代表返回的结果集  通过next()方法改变指针指向遍历结果集
+	修改指针指向的方法:
+	next()   移动到下一行  返回值为boolean
+	precious()  移动到前一行  返回值为boolean
+	absolute(int row)  移动到指定行
+	beforeFrist()  移动到结果集第一行的前面
+	afterLast()  移动到结果集最后一行的后面
+
+	结果集中的数据同个各种get方法进行获取
+	SQL数据类型和java数据类型的转换
+	BIT(1)		getBoolean()	Boolean
+	bit(n)		getBytes()	byte[]
+	TINYINT		getByte()	Byte
+	SMALLINT	getShort()	Short
+	INT		getInt()	Int
+	BIGINT		getLong()	Long
+	CHAR VARCHAR LONGVARCHAR   getString()	string
+	TEXT(clob) Blob   getClob()  getBlob()	Clob  Blob   是两个接口,有数据库驱动具体实现
+	DATE		getDate()	java.sql.Date   为java.util.Date的子类
+	TIME		getTime		java.sql.Time
+	TIMESTAMP	getTimestamp()	java.sql.Timestamp
+
+	get方法可以有int index参数，指针当前指向行对应列的值   从1开始
+	参数也可以是String label   当前行指定列标签对应的值    
+	
+SQL注入的防范
+	PreparedStatement对象(尽量使用该对象,不使用Statement对象)
+	作用：
+	1.预编译SQL语句,数据库执行的效率高
+	2.防止SQL注入
+	3.支持参数占位符"?"
+
+	connection.preparedStatement(sql)可以来创建一个PreparedStatement对象
+	里面的sql语句VALUES(?,?,?,?,...)用参数占位符来代替参数
+	然后用PreparedStatement对象调用set方法  set+参数类型(参数index,参数值);
+	参数index即参数在sql语句中的位置
+
+	调用execute()方法执行preparedment对象中的SQL语句
+	executeQuery():执行查询语句返回一个resultSet对象
+	executeUpdate():执行操作语句:INSERT,UPDATE,DELETE等,不会返回结果集  
+
+数据库分页
+	分为物理分页和逻辑分页
+	物理分页：物理分页就是数据库本身提供了分页方式，如MySQL的limit，好处是效率高，不好的地方就是不同数据库有不同的方法。
+	逻辑分页：逻辑分页利用游标分页，好处是所有数据库都统一，坏处就是效率低。
+
+	MySQL物理分页：
+	SELECT * FROM tbl_name LIMIT M,N;
+	M:每页开始的记录的索引号（从0开始）
+	N：每页显示的条数
+
+	每页开始记录的索引=（当前页码-1）*每页显示的条数
+	总页数=总条数%每页显示的条数==0？总条数/每页显示的条数：总条数/每页显示的条数+1
+
+	SELECT COUNT(*) FROM TABLE  获取指定表中记录的总条数   可以加WHERE语句
+
+	一般建一个page类，将分页相关的所有数据全部存在里面
+
+大数据处理
+
+	注意：一般情况下不会把大数据文本和二进制数据保存到数据库中
+
+	大数据也称之为LOB（Large Objects） LOB分为clob和blob
+	clob：用于存储大文本    blob：用于存储二进制数据，如图像，声音，二进制文等
+
+	在MySQL中，只有blob，没有clob   mysql中存储大文本采用的是Text
+	在MySQL中Text和blob又分为：
+	TINYTEXT  TEXT   MEDIUMTEXT  LONGTEXT
+	TINYBLOB  BLOB   MEDIUNBLOB  LONGBLOB
+
+	大数据的存取要使用流的形式
+	用preparedStatement对象的setCharacterStream(paramIndex,reader,length)
+	paramIndex:参数在sql语句中的位置
+	reader:文件读取流
+	length:文件长度   注意:MySQL不支持long类型的参数,只能使用int   用file.length()方法要将值强转为int类型
+
+	取:
+	通过preparedStatement对象的executeQuery方法执行sql语句并得到返回的resultSet结果集
+
+	通过resultSet的next()方法遍历结果集
+	resultSet对象的getCharacterStream("字段")方法可以的到读取流Reader
+	要将读出的文件存进硬盘.只需要建一个FileWriter,将Reader中的数据写出即可
+
+	如果是blob类型的数据(二进制文件)
+	存用PreparedStatement的setBinaryStream(index,inputStream,length)方法
+	如果是二进制文件,可以用inputStream的available()方法获取文件大小
+
+	取的时候
+	resultSet.getBinaryStraem("字段")
+
+数据库批处理
+	向数据库发送SQL语句的时候,如果是一条一条的发送,会影响数据库执行的效率
+	JDBC提供了批处理机制,可以发送一批SQL语句给数据库处理,提升执行效率
+
+	两种实现批处理的方式
+	Statement.addBatch(sql);
+	Statement对象内部有一个list集合对象,通过该方法可以将sql语句添加到Statement的list中等待处理
+
+	执行批处理SQL语句的方法:
+	executeBatch():执行批处理,将list中的sql语句交给数据库,按顺序执行
+	clearBatch():清除批处理,清空list中的sql语句
+
+	注意:批处理的时候,PreparedStatement对象只能执行sql语句相同参数不同的,因为在创建对象时,就要把sql语句传递给构造方法
+	如果要执行的SQL语句不通,要使用Statement对象
+
+获取数据库自动生成的主键
+	注意:只有在执行INSERT语句的时候才能获取
+	在输入sql语句的时候加入Statement.RETURN_GENERATED_KEYS参数(可以不写,默认就有该参数)
+	然后使用executeUpdate执行之后,可以通过getGeneratedKeys()方法获取一个ResultSet对象
+	该结果集只有一行一列.就是插入纪录时数据库生成的主键值
+
+	一般情况下是自己来维护数据库的主键值,而不是让数据库自动生成
+
+JDBC调用存储过程
+	用CallableStatement对象来调用存储过程
+	通过connection的preparedCall("{Call 存储过程名(?,?...)}")产生CallableStatement对象
+
+	输入参数直接用set方法设置值即可
+	输出参数用registerOutParameter(index,sqlType)方法设置参数类型
+	参数类型用Types类中的字段表示
+
+	调用execute()方法执行存储过程
+	执行完之后通过get+数据类型(index)方法获得输出参数的值
+
+事务:
+	事务是指逻辑上的一组操作,组成这组操作的单元,要么全部成功,要么全部不成功
+
+	数据库开启事务的命令:
+	start transaction  开启事务
+	Rollback   回滚事务
+	Commit	提交事务
+
+	事务是默认开启的.而每一条sql语句就是一个事务,如果要多个操作为一个事务,要手动设置
+
+	用connection接口的方法:
+	conn.setAutoCommit(false);设置之后相当于事务的开始
+	将代码放入try-catch中.在catch中写上:
+	conn.rollback() 执行事务回滚   即事务执行过程出现异常,就执行回滚
+
+	在try代码块的最后加上:
+	conn.commit(); 如果整个事务执行的过程都没有异常.就提交事务
+
+	设置回滚点:
+	SavePoint sp = conn.setSavePoint();  设置之后,执行回滚会回到这个点,而不是事务开始的地方
+	Conn.rollback(sp);将回滚点作为参数传入执行回滚
+
+	在设置了回滚点之后,要在finally代码块中加上:
+	conn.commit();进行事务提交,否则回滚点之前执行的代码也不会被提交
+
+事务的特性:
+	A 原子性(Atomicity):说明事务是一个不可分割的单位
+	C 一致性(Consistency):事物必须是数据库从一个一致性状态变换到另一个一致性状态
+	I 隔离性(Isolation):一个事物不能被其他事物打扰(多个并发事务要相互隔离)
+	D 持久性(Durability):一个事物一旦被提交,他对数据库中数据的改变就是永久性的
+
+	事务的隔离级别:
+	多个线程开启各自事务操作数据库中的数据时,数据库系统要负责隔离操作
+	以保证各个线程在获取数据时的准确性
+
+	如果不考虑事务隔离性的情况下,会出现以下错误情况:
+	脏读:指一个事物读到了另一个事物中还没有提交的数据
+	不可重复读:针对一条记录,读取到的数据前后不一样
+	虚读(幻读):针对一张表,前后读到的记录条数不一样
+	
+	数据库定义的四种隔离级别:
+	READ UNCOMMITTED:脏读,不可重复读,虚读都有可能发生
+	READ COMMITED:能避免脏读.但是不可重复读,虚读有可能发生
+	REPEATABLE READ:可避免脏读,不可重复读,但是虚读有可能发生(数据库的默认级别)
+	SERIALIZABLE:可避免脏读,不可重复读,虚读
+	
+	MySQL中控制事务隔离级别的语句
+	SELECT @@TX_ISOLATION   查看当前的事务隔离级别
+	SET TRANSACTION ISOLATION LEVEL 设置事务的隔离级别
+
+	在JDBC中,connection接口由四个字段,分别代表四个隔离级别
+	调用conn.setTransactionIsolation(Connection.级别字段)
+	设置在开启事务前,否则设置无效
+
+数据库连接池
+	如果有dao层直接获取链接,每一次访问数据库都要获取一次链接,会极大的消耗系统资源,效率低
+
+	在数据库连接池中创建好数据库连接,要对数据库操作的时候从数据库连接池获取连接
+	操作完了再将连接还回去,不用每一次操作都去创建连接
+
+	编写数据库连接池需要实现javax.sql.DataSource接口
+	定义了getConnection()方法,可以获取连接池中的连接对象
+	
+	按照DataSource接口的字面意思.一般称为数据源
+
+	写一个数据源实现类,重写getConnection()方法
+	使用的时候,调用getConnection()方法获取连接对象
+	然后通过改写mysql数据库驱动的connection实现类的close方法,
+	改变该方法的功能,让他从原来的关闭数据库连接改为将连接对象添加到数据源中
+
+	对于一个已知类的某个方法进行功能上的改变,可以有三个方法:
+	1.定义一个子类,扩展父类的某个功能
+	2.利用包装设计模式改写原有的类的功能
+		包装设计模式
+		a.编写一个类,实现与被改写类相同的接口
+		b.定义一个变量,保存被改写类的实例
+		c.定义一个构造方法,传入被改写类的实例
+		d.对于要改写的方法,改写即可
+		e.对于不需要改写的方法,调用原有的对象的对应方法即可
+
+	定义一个包装类,不改写任何方法.
+	所有方法都调用被改写类的实例调用其原有方法
+	这样就是一个默认适配器,要改写某个方法,直接继承适配器改写即可
+	
+	通过继承默认适配器的包装设计模式
+		a.编写一个类,继承默认的适配器
+		b.定义一个引用,纪录被改写类的实例
+		c.定义一个构造方法,传入被改写类的实例
+		d.对于要改写的方法,改写即可.
+
+	3.基于接口的动态代理(拦截器)
+	通过java.lang.reflect包中的Proxy类
+	Proxy.newProxyInstance(ClassLoader,interfaces,InvocationHandler)
+	通过该静态方法可以获取动态代理实例
+	ClassLoader:被代理类的类加载器   对象.getClass().getClassLoader()
+	interfaces:被代理类实现的所有接口   对象.getClass().getInterfaces()
+	InvocationHandler:处理方式
+
+	每一次使用动态代理对象调用某个方法,都会经过处理方式的invoke方法
+	invoke(proxy,method,args[]){}
+	
+	使用的时候在newProxyInstance()方法参数列表中new InvocationHandler对象
+	通过匿名内部类的形式来实现InvocationHandler接口
+
+	在Invoke方法中通过if条件语句判断是否是需要改写的方法,是就改写
+	不是就在else语句中写:
+	return method.invoke(对象,args)   执行对象原有的方法
+
+	public synchronized Connection getConnection() throws SQLException {
+		if(pool.size()>0){
+			final Connection conn = pool.remove();//原有对象
+			//返回动态代理对象
+			return (Connection)Proxy.newProxyInstance(conn.getClass().getClassLoader(), conn.getClass().getInterfaces(), new InvocationHandler() {
+				@Override
+				public Object invoke(Object proxy, Method method, Object[] args)
+						throws Throwable {
+					if("close".equals(method.getName())){
+						return pool.add(conn);
+					}else{
+						return method.invoke(conn, args);
+					}
+				}
+			});
+		}else{
+			throw new RuntimeException("对比起！服务器真忙");
+		}
+	}
+
+	这样其实返回的是一个动态代理对象,实现了connection接口
+	
+开源数据库连接池
+	很多的WEB服务器(weblogic  websphere tomcat)都提供了DataSource的实现
+
+	常用的数据库连接池的实现:
+	DBCP:
+	D3P0:
+
+	在实际应用中,不需要编写连接数据库的代码,直接从数据源中获取数据库的连接
+	编程时要尽量使用这些数据源的实现,以提升程序的数据库访问性能
+
+	DBCP是Apache软件基金组织下的开源连接池实现,使用时应该在系统中增加以下连个jar包
+	Commons-dbcp.jar    Commons-pool.jar
+	将jdbc的properties配置文件放到构建路径中
+	通过org.apache.commons.dbcp下的BasicDataSourceFactory的createDataSource(properties);
+	获取DataSource对象,将配置信息properties集合作为参数传递
+
+数据库的元信息
+	即数据库,表,列的定义信息
+
+	DataBaseMetaData对象 用于获取数据库的元信息
+	通过connection对象的getMetaData方法获取该对象
+
+	常用方法:
+	getURL()  返回一个String类对象,代表数据库的URL
+	getUserName()  返回连接当前数据库管理系统的用户名
+	getDataBaseProductName()  返回数据库的产品称号
+	getDataBaseProductVersion()  返回数据库的版本号
+	getDriverName()  返回驱动程序的名称
+	getDriverVersion()  返回驱动程序的版本号
+	isReadOnly()  数据库是否是只读的,返回值为boolean类型
+
+	ParameterMetaData对象  通过PreparedStatement.getParameterMetaData()获取
+	代表PreparedStatement元数据的对象
+
+	常用方法:
+	getParameterCount()   获得参数的个数(sql语句中占位符的个数)
+	getParameterType(int param)  获得指定参数的sql类型
+
+	ResultSet.getMetaData()
+	获得代表ResultSet对象元数据的ResultSetMetaData对象
+
+	常用方法:
+	getColumnCount()   返回ResultSet对象的列数
+	getColumnName(int column)  获得指定列的名称
+	getColumnTypeName(int column)  获得指定列的类型 java.sql.Types
+
+Apache 的DBUtils框架
+	
+	org.apache.commons.dbutils
+	重要的类和接口:
+	org.apache.commons.dbutils.QueryRunner
+	构造方法:
+	可以是默认无参的构造方法
+	也可以将数据源DataSource作为参数传递
+	如果是无参构造方法,在调用方法写sql语句时,要加上connection参数
+
+	常用方法:
+	1.batch([conn],sql,Object [][] params)
+	如果是默认构造函数创建的QueryRunner对象调用方法,就要加connection对象参数
+	sql参数为SQL语句   二维数组参数,执行的条数和每一条的参数
+	注意:批处理的sql语句必须相同,但是参数可以不同
+	
+	2.query([conn],sql,ResultSetHandler,[...param])
+	默认构造方法:要加connection对象
+	sql:SQL语句
+	ResultSetHandler:结果集处理器对象，拿到结果集进行处理
+	...param:可变参数列表
+	
+	3.updata([conn],sql,...param)
+	connection参数
+	sql:sql语句
+	param:可变参数列表
+
+	org.apache.commons.dbutils.ResultSetHandler
+	结果处理器接口
+	提供九个实现类：
+	ArrayHandler:把结果集中的第一行数据转成对象数组
+	ArrayListHandler:把结果集中的每一行数据都转成一个数组,然后放到list集合中
+	
+	BeanHandler:将结果集中的第一行数据封装到一个对应的JavaBean实例中
+	BeanListHandler:将结果集中的每一行都封装到一个JavaBean实例中,然后存放到list集合中
+	
+	ColumnLsitHandler:将结果集中某一列的数据存放到List中
+
+	KeyedHandler(name):将结果集中的每一行数据都封装到一个Map<列名,列值>中,
+		再把这些map存放到一个map里,key为指定列的值,一般为主键列
+	
+	MapHandler:将结果集的第一行封装到一个Map集合中,key是列名,value是列值
+
+	MapListHandler:将结果集的每一行都封装到一个Map集合中,再将所有的Map存放到List中
+	
+	ScalarHandler:适合取只有一行一列的结果集,比如取数据表的记录总数  
+		返回值Object,在转成需要的类型    如记录总数:int num = ((long)obj).intValue();
+		注意:SELECT COUNT(*) FROM tbl_name;查询记录总条数,返回的是long类型的值
+
+	工具类:
+	org.apache.commons.dbutils.DbUtils
+
+	close方法关闭资源:connection,resultset,statement
+
+	事务控制:
+	从数据源获取connection对象
+	在QueryRunner对象使用updata,query方法前,用connection对象调用serAutoCommit(flase)方法
+	将代码放入try中,在catch中用conn.rollback().出现异常就回滚事务  finally里面写上conn.commit();
+
+	注意,DAO层只负责数据库的访问,所有业务逻辑应该写在service层
+	将conn作为dao的构造参数传入.在service层进行事务的开启,回滚和提交
+
+
+ThreadLocal类进行事务控制
+	该类对象内部有一个Map集合  key是当前线程对象
+	通过ThreadLocal类的实例对象调用set,get,remove方法,可以设置,获取,删除当前线程对应的value
+	
+	一般情况下,connection都是在DAO层,但是如果要将事务控制逻辑写到service层,就要在service层获取connection对象
+	用connection对象来进行事务控制
+
+	这时可以建一个工具类,将connection对象存到ThreadLocal的map中.
+	在该工具类中定义getconnection的方法,事务控制的方法以及关闭connection的方法,在service层要进行事务控制,直接调用该工具类的方法即可
+	
