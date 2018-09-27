@@ -1680,3 +1680,78 @@ SpringCloud Config分为服务端和客户端两部分：
 
 2.修改配置文件
 
+```yaml
+server:
+  port: 3344
+
+spring:
+  application:
+    name: micro-config-server
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/z666666d/serviceConfig.git
+         #git仓库地址
+```
+
+3.给主启动类添加@EnableConfigServer注解
+
+```java
+@SpringBootApplication
+@EnableConfigServer
+public class ConfigApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(ConfigApplication.class, args);
+    }
+}
+```
+
+4.配置好后，直接通过访问配置中心就可以看到配置文件内容
+
+如：http://localhost:3344/application-dev.yml     
+
+没有设置profilename默认为dev，所以必须加-dev，否则会出现404错误
+
+## 3. 配置读取规则
+
+官方文档指出HTTP服务具有以下格式的资源：
+
+```text
+/{application}/{profile}[/{label}]
+/{application}-{profile}.yml
+/{label}/{application}-{profile}.yml
+/{application}-{profile}.properties
+/{label}/{application}-{profile}.properties
+```
+
+其中“应用程序”作为`SpringApplication`中的`spring.config.name`注入（即常规Spring Boot应用程序中通常为“应用程序”），“配置文件”是活动配置文件（或逗号分隔列表）的属性），“label”是可选的git标签（默认为“master”）。
+
+##4. 客户端配置
+
+1.添加pom依赖
+
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-config-client</artifactId>
+</dependency>
+```
+
+2.添加bootstrap.yml配置文件
+
+application.yml是用户级的资源配置项。bootstrap.yml是系统级的，优先级最高。
+
+SpringCloud会创建一个“Bootstrap Context”，作为spring应用的"Application Context"的父上下文。初始化的时候，"Bootstrap Context"负载从外部源加载配置属性并加载配置。这两个上下文共享一个从外部获取的”Environment“。”Bootstrap“属性有高优先级，默认情况下，他们不会被本地配置覆盖。”Bootstrap context“和”Application context“有着不同的约定，所以新增一个”bootstrap.yml“文件，保证”Bootstrap context“与”Application context“配置的分离。
+
+```yaml
+spring:
+  cloud:
+    config:
+      name: micro-service #需要从git上读取的资源名称，没有yml后缀
+      profile: dev  #选择profile
+      label: master
+      uri: http://localhost:3344  #本微服务启动后先去找这个uri对应的springcloud config服务，获取github的服务地址
+```
+
