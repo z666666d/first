@@ -1018,3 +1018,508 @@ public class PhantomBuffer {
 
 ​	这是G1相对于CMS的另一大优势，降低停顿时间是G1和CMS共同的关注点，但G1除了追求低停顿外，还能建立可预测的停顿时间模型，能让使用者明确指定在一个长度为M毫秒的时间片段内，消耗在垃圾收集上的时间不得超过N毫秒，这几乎已经是实时Java（RTSJ）的垃圾收集器的特征了。
 
+#### 3.5.8.2 Region
+
+​	在G1之前的收集器进行收集的范围都是整个新生代或者老年代。而使用G1收集器时，Java堆的内存布局就与其他收集器有很大差别，它将整个Java堆划分为多个大小相等的独立区域（Region），虽然还保留有新生代和老年代的概念，但新生代和老年代不再是物理隔离的了，它们都是一部分Region（不需要连续）的集合。
+
+​	G1收集器之所以能建立可预测的停顿时间模型，是因为它可以有计划地避免在整个Java堆中进行全区域的垃圾收集。G1跟踪各个Region里面的垃圾堆积的价值大小（回收所获得的空间大小以及回收所需时间的经验值），在后台维护一个优先列表，每次根据允许的收集时间，优先回收价值最大的Region（这也就是Garbage-First名称的来由）。这种使用Region划分内存空间以及有优先级的区域回收方式，保证了G1收集器在有限的时间内可以获取尽可能高的收集效率。
+
+#### 3.5.8.3 Remembered Set
+
+​	各个Region都可不能是独立存在的，各Region中对象可能存在引用关系，那么在可达性分析的时候，岂不是要扫描整个Java堆内存？不只是在G1中存在这样的问题，其实在分代收集中，也会出现类似的问题，只是G1的问题更为突出。新生代对象的收集很频繁，但是新生代的规模一般都比老年代小很多，如果每次收集新生代都要去扫描老年代，那么Minor GC的效率会降低很多。
+
+​	对于G1或者其他分代收集器，虚拟机都是采用Remembered Set来避免全堆扫描。G1中每个Region都有一个与之对应的Remembered Set，虚拟机发现程序在对Reference类型的数据进行写操作时，会产生一个Write Barrier暂时中断写操作，检查Reference引用的对象是否处于不同的Region之中（在分代的例子中就是检查是否老年代中的对象引用了新生代中的对象），如果是，便通过CardTable把相关引用信息记录到被引用对象所属的Region的Remembered Set之中。当进行内存回收时，在GC根节点的枚举范围中加入Remembered Set即可保证不对全堆扫描也不会有遗漏。
+
+#### 3.5.8.4 收集步骤
+
+​	如果不计算维护Remembered Set的操作，G1收集器的运作大致可划分为以下几个步骤：
+
+- 初始标记（Initial Marking）
+- 并发标记（Concurrent Marking）
+- 最终标记（Final Marking）
+- 筛选回收（Live Data Counting and Evacuation）
+
+
+
+​	1.初始标记
+
+​	初始标记阶段仅仅只是标记一下GC Roots能直接关联到的对象，并且修改TAMS（Next Top at Mark Start）的值，让下一阶段用户程序并发运行时，能在正确可用的Region中创建新对象，这阶段需要停顿线程，但耗时很短。
+
+​	2.并发标记
+
+​	并发标记阶段是从GC Root开始对堆中对象进行可达性分析，找出存活的对象，这阶段耗时较长，但可与用户程序并发执行。
+
+​	3.最终标记
+
+​	而最终标记阶段则是为了修正在并发标记期间因用户程序继续运作而导致标记产生变动的那一部分标记记录，虚拟机将这段时间对象变化记录在线程Remembered Set Logs里面，最终标记阶段需要把Remembered Set Logs的数据合并到Remembered Set中，这阶段需要停顿线程，但是可并行执行。
+
+​	4.筛选回收
+
+​	筛选回收阶段首先对各个Region的回收价值和成本进行排序，根据用户所期望的GC停顿时间来制定回收计划，从Sun公司透露出来的信息来看，这个阶段其实也可以做到与用户程序一起并发执行，但是因为只回收一部分Region，时间是用户可控制的，而且停顿用户线程将大幅提高收集效率。
+
+![G1收集器运行示意图](/G1收集器运行示意图.jpg)
+
+### 3.5.9 理解GC日志
+
+​	每一种收集器的日志形式都是由它们自身的实现所决定的，换而言之，每个收集器的日志格式都可以不一样。但虚拟机设计者为了方便用户阅读，将各个收集器的日志都维持一定的共性，例如以下两段典型的GC日志：
+
+```text
+	33.125：[GC[DefNew：3324K-＞152K（3712K），0.0025925 secs]3324K-＞152K（11904K），0.0031680 secs]
+	1 0 0.6 6 7：[F u l l G C[T e n u r e d：0 K-＞2 1 0 K（1 0 2 4 0 K），0.0 1 4 9 1 4 2 s e c s]4603K-＞210K（19456K），[Perm：2999K-＞2999K（21248K）]，0.0150007 secs][Times：user=0.01 sys=0.00，real=0.02 secs]
+```
+
+​	最前面的数字“33.125：”和“100.667：”代表了GC发生的时间，这个数字的含义是从Java虚拟机启动以来经过的秒数。
+
+​	GC日志开头的“[GC”和“[Full GC”说明了这次垃圾收集的停顿类型，而不是用来区分新生代GC还是老年代GC的。如果有“Full”，说明这次GC是发生了Stop-The-World的，例如下面这段新生代收集器ParNew的日志也会出现“[Full GC”（这一般是因为出现了分配担保失败之类的问题，所以才导致STW）。如果是调用System.gc（）方法所触发的收集，那么在这里将显示“[Full GC（System）”。
+
+```text
+[Full GC 283.736：[ParNew：261599K-＞261599K（261952K），0.0000288 secs]
+```
+
+​	接下来的“[DefNew”、“[Tenured”、“[Perm”表示GC发生的区域，这里显示的区域名称与使用的GC收集器是密切相关的，例如上面样例所使用的Serial收集器中的新生代名为“DefaultNew Generation”，所以显示的是“[DefNew”。如果是ParNew收集器，新生代名称就会变为“[ParNew”，意为“Parallel New Generation”。如果采用Parallel Scavenge收集器，那它配套的新生代称为“PSYoungGen”，老年代和永久代同理，名称也是由收集器决定的。
+
+​	后面方括号内部的“3324K-＞152K（3712K）”含义是“GC前该内存区域已使用容量-＞GC后该内存区域已使用容量（该内存区域总容量）”。而在方括号之外的“3324K-＞152K（11904K）”表示“GC前Java堆已使用容量-＞GC后Java堆已使用容量（Java堆总容量）”。
+
+​	再往后，“0.0025925 secs”表示该内存区域GC所占用的时间，单位是秒。有的收集器会给出更具体的时间数据，如“[Times：user=0.01 sys=0.00，real=0.02 secs]”，这里面的user、sys和real与Linux的time命令所输出的时间含义一致，分别代表用户态消耗的CPU时间、内核态消耗的CPU事件和操作从开始到结束所经过的墙钟时间（Wall Clock Time）。CPU时间与墙钟时间的区别是，墙钟时间包括各种非运算的等待耗时，例如等待磁盘I/O、等待线程阻塞，而CPU时间不包括这些耗时，但当系统有多CPU或者多核的话，多线程操作会叠加这些CPU时间，所以读者看到user或sys时间超过real时间是完全正常的。
+
+### 3.5.10 垃圾收集器参数总结
+
+| 参数                             | 描述                                       |
+| ------------------------------ | ---------------------------------------- |
+| UseSerialGC                    | 虚拟机运行在Client模式下的默认值，打开此开关后，使用Serial+Serial Old的收集器组合进行内存回收 |
+| UseParNewGC                    | 打开此开关后，使用ParNew+Serial Old的收集器组合进行内存回收   |
+| UseConcMarkSweepGC             | 打开此开关后，使用ParNew+CMS+Serial Old的收集器组合进行内存回收。Serial Old收集器将作为CMS收集器出现Concurrent Mode Failure失败后的后备收集器使用 |
+| UseParallelGC                  | 虚拟机运行在Server模式下的默认值，打开此开关后，使用Parallel Scavenge + Serial Old（PS MarkSweep）的收集器组合进行内存回收 |
+| UseParallelOldGC               | 打开此开关后，使用Parallel Scavenge + Parallel Old的收集器组合进行内存回收 |
+| SurvivorRatio                  | 新生代中Eden区域与Survivor区域的容量比值，默认值为8，代表Eden：Survivor=8：1 |
+| PretenureSizeThreshold         | 直接晋升到老年代的对象大小，设置这个参数后，大于这个参数的对象将直接在老年代分配 |
+| MaxTenuringThreshold           | 晋升到老年代的对象年龄，每个对象在坚持过一次Minor GC之后，年龄就增加1，当超过这个参数时就进入老年代 |
+| UseAdaptiveSizePolicy          | 动态调整Java堆中各个区域的大小以及进入老年代的年龄              |
+| HandlePromotionFailure         | 是否允许分配担保失败，即老年代的剩余空间不足以应付新生代的整个Eden和Survivor区的所有对象都存活的极端情况 |
+| ParallelGCThreads              | 设置并行GC时进行内存回收的线程数                        |
+| GCTimeRatio                    | GC时间占总时间的比率，默认值为99，即允许1%的GC时间。仅在使用Parallel Scavenge收集器时生效 |
+| MaxGCPauseMillis               | 设置GC的最大停顿时间，仅在使用Parallel Scavenge收集器时生效  |
+| CMSInitiatingOccupancyFraction | 设置CMS收集器在老年代空间被使用多少后触发垃圾收集。默认值为68%，仅在使用CMS收集器时生效 |
+| UseCMSCompactAtFullCollection  | 设置CMS收集器在完成垃圾收集后是否要进行一次内存碎片整理，仅在使用CMS收集器时生效 |
+| CMSFullGCsBeforeCompaction     | 设置CMS收集器在进行若干次垃圾收集后再启动一次内存碎片整理。仅在使用CMS收集器时生效 |
+
+## 3.6 内存分配与回收策略
+
+​	自动内存管理最终可以归结为解决两个问题：给对象分配内存以及回收分配给对象的内存。
+
+​	对象的内存分配，往大方向讲，就是在堆上分配（但也可能经过JIT编译后被拆散为标量类型并间接地栈上分配 [1] ），对象主要分配在新生代的Eden区上，如果启动了本地线程分配缓冲，将按线程优先在TLAB上分配。少数情况下也可能会直接分配在老年代中，分配的规则并不是百分之百固定的，其细节取决于当前使用的是哪一种垃圾收集器组合，还有虚拟机中与内存相关的参数的设置。
+
+### 3.6.1 对象优先在Eden分配
+
+​	大多数情况下，对象在新生代Eden区中分配。当Eden区没有足够空间进行分配时，虚拟机将发起一次Minor GC。GC期间如果有需要分配的对象，而Survivor空间没有足够的空间分配，虚拟机会通过分配担保机制提前转移到老年代去。
+
+​	虚拟机提供了-XX：+PrintGCDetails这个收集器日志参数，告诉虚拟机在发生垃圾收集行为时打印内存回收日志，并且在进程退出的时候输出当前的内存各区域分配情况。在实际应用中，内存回收日志一般是打印到文件后通过日志工具进行分析。
+
+​	新生代GC（Minor GC）：指发生在新生代的垃圾收集动作，因为Java对象大多都具备朝生夕灭的特性，所以Minor GC非常频繁，一般回收速度也比较快。
+
+​	老年代GC（Major GC/Full GC）：指发生在老年代的GC，出现了Major GC，经常会伴随至少一次的Minor GC（但非绝对的，在Parallel Scavenge收集器的收集策略里就有直接进行Major GC的策略选择过程）。Major GC的速度一般会比Minor GC慢10倍以上。
+
+### 3.6.2 大对象直接进入老年代
+
+​	所谓的大对象是指，需要大量连续内存空间的Java对象，最典型的大对象就是那种很长的字符串以及数组。大对象对虚拟机的内存分配来说就是一个坏消息，经常出现大对象容易导致内存还有不少空间时就提前触发垃圾收集以获取足够的连续空间来“安置”它们。（比遇到一个大对象更加坏的消息就是遇到一群“朝生夕灭”的“短命大对象”，写程序的时候应当避免）
+
+​	虚拟机提供了一个-XX：PretenureSizeThreshold参数，令大于这个设置值的对象直接在老年代分配。这样做的目的是避免在Eden区及两个Survivor区之间发生大量的内存复制。
+
+​	注意PretenureSizeThreshold参数只对Serial和ParNew两款收集器有效，Parallel Scavenge收集器不认识这个参数，Parallel Scavenge收集器一般并不需要设置。如果遇到必须使用此参数的场合，可以考虑ParNew加CMS的收集器组合。
+
+### 3.6.3 长期存活的对象进入老年代
+
+​	既然虚拟机采用了分代收集的思想来管理内存，那么内存回收时就必须能识别哪些对象应放在新生代，哪些对象应放在老年代中。为了做到这点，虚拟机给每个对象定义了一个对象年龄（Age）计数器。如果对象在Eden出生并经过第一次Minor GC后仍然存活，并且能被Survivor容纳的话，将被移动到Survivor空间中，并且对象年龄设为1。对象在Survivor区中每“熬过”一次Minor GC，年龄就增加1岁，当它的年龄增加到一定程度（默认为15岁），就将会被晋升到老年代中。对象晋升老年代的年龄阈值，可以通过参数-XX：MaxTenuringThreshold设置。
+
+### 3.6.4 动态对象年龄判断
+
+​	为了能更好地适应不同程序的内存状况，虚拟机并不是永远地要求对象的年龄必须达到了MaxTenuringThreshold才能晋升老年代，如果在Survivor空间中相同年龄所有对象大小的总和大于Survivor空间的一半，年龄大于或等于该年龄的对象就可以直接进入老年代，无须等到MaxTenuringThreshold中要求的年龄。
+
+### 3.6.5 空间分配担保
+
+​	在发生Minor GC之前，虚拟机会先检查老年代最大可用的连续空间是否大于新生代所有对象总空间，如果这个条件成立，那么Minor GC可以确保是安全的。如果不成立，则虚拟机会查看HandlePromotionFailure设置值是否允许担保失败。如果允许，那么会继续检查老年代最大可用的连续空间是否大于历次晋升到老年代对象的平均大小，如果大于，将尝试着进行一次Minor GC，尽管这次Minor GC是有风险的；如果小于，或者HandlePromotionFailure设置不允许冒险，那这时也要改为进行一次Full GC。
+
+​	为什么需要空间分配担保：新生代使用复制收集算法，但为了内存利用率，只使用其中一个Survivor空间来作为轮换备份，因此当出现大量对象在MinorGC后仍然存活的情况（最极端的情况就是内存回收后新生代中所有对象都存活），就需要老年代进行分配担保，把Survivor无法容纳的对象直接进入老年代。
+
+​	老年代要进行这样的担保，前提是老年代本身还有容纳这些对象的剩余空间，一共有多少对象会活下来在实际完成内存回收之前是无法明确知道的，所以只好取之前每一次回收晋升到老年代对象容量的平均大小值作为经验值，与老年代的剩余空间进行比较，决定是否进行Full GC来让老年代腾出更多空间。
+
+​	取平均值进行比较其实仍然是一种动态概率的手段，也就是说，如果某次Minor GC存活后的对象突增，远远高于平均值的话，依然会导致担保失败（Handle Promotion Failure）。如果出现了HandlePromotionFailure失败，那就只好在失败后重新发起一次Full GC。虽然担保失败时绕的圈子是最大的，但大部分情况下都还是会将HandlePromotionFailure开关打开，避免Full GC过于频繁。
+
+​	在JDK 6 Update 24之后，HandlePromotionFailure参数不会再影响到虚拟机的空间分配担保策略，虽然源
+码中还定义了HandlePromotionFailure参数，但是在代码中已经不会再使用它。JDK 6 Update24之后的规则变为只要老年代的连续空间大于新生代对象总大小或者历次晋升的平均大小就会进行Minor GC，否则将进行Full GC。
+
+## 3.7 小结
+
+​	内存回收与垃圾收集器在很多时候都是影响系统性能、并发能力的主要因素之一，虚拟机之所以提供多种不同的收集器以及提供大量的调节参数，是因为只有根据实际应用需求、实现方式选择最优的收集方式才能获取最高的性能。没有固定收集器、参数组合，也没有最优的调优方法，虚拟机也就没有什么必然的内存回收行为。因此，学习虚拟机内存知识，如果要到实践调优阶段，那么必须了解每个具体收集器的行为、优势和劣势、调节参数。
+
+# 第四章 虚拟机性能监控与故障处理工具
+
+## 4.1 JDK的命令行工具
+
+​	在JDK的bin目录下有如“java.exe”、“javac.exe”等命令行工具，这些命令行工具大多数是jdk/lib/tools.jar类库的一层薄包装而已，它们主要的功能代码是在tools类库中实现的。Linux版本的JDK，这些工具中很多甚至就是由Shell脚本直接写成的，可以用vim直接打开它们。
+
+​	JDK开发团队选择采用Java代码来实现这些监控工具是有特别用意的：当应用程序部署到生产环境后，无论是直接接触物理服务器还是远程Telnet到服务器上都可能会受到限制。借助tools.jar类库里面的接口，我们可以直接在应用程序中实现功能强大的监控分析功能 。
+
+常用命令行工具：
+
+| 工具     | 主要作用                                     |
+| ------ | ---------------------------------------- |
+| jps    | JVM Process Status Tool， 用于显示系统内所有的HotSpot虚拟机进程 |
+| jstat  | JVM Statistics Monitoring Tool， 用于监控虚拟机各种运行状态信息的命令行工具 |
+| jinfo  | Configuration Info for Java， 用于查看和调整虚拟机的配置参数 |
+| jmap   | Memory Map for Java， 用于生成堆转储快照（一般称为heapdump或dump文件） |
+| jhat   | JVM Heap Analysis Tool， 用于分析jmap生成的堆转储快照 |
+| jstack | JVM Stack Trance， 用于生成虚拟机当前时刻的线程快照       |
+
+### 4.1.1 jps：虚拟机进程状况工具
+
+​	全称：JVM Process Status Tool
+
+​	功能：可以列出正在运行的虚拟机进程，并显示虚拟机执行主类（Main Class,main（）函数所在的类）名称以及这些进程的本地虚拟机唯一ID（Local Virtual Machine Identifier,LVMID）。
+
+​	虽然功能比较单一，但它是使用频率最高的JDK命令行工具，因为其他的JDK工具大多需要输入它查询到的LVMID来确定要监控的是哪一个虚拟机进程。对于本地虚拟机进程来说，LVMID与操作系统的进程ID（Process Identifier,PID）是一致的，使用Windows的任务管理器或者UNIX的ps命令也可以查询到虚拟机进程的LVMID，但如果同时启动了多个虚拟机进程，无法根据进程名称定位时，那就只能依赖jps命令显示主类的功能才能区分了。
+
+​	命令格式：
+
+```text
+jps[options][hostid]
+```
+
+​	jps执行样例：
+
+```text
+D：\Develop\Java\jdk1.6.0_21\bin＞jps-l
+2388 D：\Develop\glassfish\bin\..\modules\admin-cli.jar
+2764 com.sun.enterprise.glassfish.bootstrap.ASMain
+3788 sun.tools.jps.Jps
+```
+
+​	jps工具主要选项：
+
+| 选项   | 作用                           |
+| ---- | ---------------------------- |
+| -q   | 只输出LVMID，省略主类名称              |
+| -m   | 输出虚拟机进程启动时传递给主类main()函数的参数   |
+| -l   | 输出全类名，如果进程执行的是Jar包，输出Jar包的路径 |
+| -v   | 输出虚拟机进程启动时的JVM参数             |
+
+###4.1.2 jstat：虚拟机统计信息监视工具
+
+​	全称：JVM Statistics Monitoring Tool
+
+​	功能：用于监视虚拟机各种运行状态信息的命令行工具。它可以显示本地或者远程 [1] 虚拟机进程中的类装载、内存、垃圾收集、JIT编译等运行数据，在没有GUI图形界面，只提供了纯文本控制台环境的服务器上，它将是运行期定位虚拟机性能问题的首选工具。
+
+​	jstat命令格式：
+
+```text
+jstat[option vmid[interval[s|ms][count]]]
+```
+
+​	对于命令格式中的VMID与LVMID需要特别说明一下：如果是本地虚拟机进程，VMID与LVMID是一致的，如果是远程虚拟机进程，那VMID的格式应当是：
+
+```text
+[protocol：][//]lvmid[@hostname[：port]/servername]
+```
+
+​	参数interval和count代表查询间隔和次数，如果省略这两个参数，说明只查询一次。假设需要每250毫秒查询一次进程2764垃圾收集状况，一共查询20次，那命令应当是：
+
+```text
+jstat-gc 2764 250 20
+```
+
+​	jstat执行样例：
+
+```text
+D：\Develop\Java\jdk1.6.0_21\bin＞jstat-gcutil 2764
+S0 S1 E O P YGC YGCT FGC FGCT GCT
+0.00 0.00 6.20 41.42 47.20 16 0.105 3 0.472 0.577
+```
+
+​	查询结果表明：这台服务器的新生代Eden区（E，表示Eden）使用了6.2%的空间，两个Survivor区（S0、S1，表示Survivor0、Survivor1）里面都是空的，老年代（O，表示Old）和永久代（P，表示Permanent）则分别使用了41.42%和47.20%的空间。程序运行以来共发生Minor GC（YGC，表示Young GC）16次，总耗时0.105秒，发生Full GC（FGC，表示FullGC）3次，Full GC总耗时（FGCT，表示Full GC Time）为0.472秒，所有GC总耗时（GCT，表示GC Time）为0.577秒。
+
+​	选项option代表着用户希望查询的虚拟机信息，主要分为3类：类装载、垃圾收集、运行期编译状况:
+
+| 选项                | 作用                                       |
+| ----------------- | ---------------------------------------- |
+| -class            | 监视类装载、卸载数量、总空间以及类装载所耗费时间                 |
+| -gc               | 监视Java堆状况、包括Eden区、两个survivor区、老年代、永久代等容量、已用空间、GC时间合计等信息 |
+| -gccapacity       | 监视内容与-gc基本相同，但输出主要关注Java堆各个区域使用到的最大、最小空间 |
+| -gcutil           | 监视内容与-gc基本相同，但输出主要关注已使用空间占总空间的百分比        |
+| -gccause          | 与-gcutil功能一样，但是会额外输出导致上一次GC的原因           |
+| -gcnew            | 监视新生代GC状况                                |
+| -gcnewcapacity    | 监视内容与-gcnew基本相同，输出主要关注使用到的最大、最小空间        |
+| -gcold            | 监视老年代GC状况                                |
+| -gcoldcapacity    | 监视内容与-gcold基本相同，输出主要关注使用到的最大、最小空间        |
+| -gcpermcapacity   | 输出永久代使用到的最大、最小空间                         |
+| -compiler         | 输出JIT编译器编译过的方法、耗时等信息                     |
+| -printcompilation | 输出已经被JIT编译的方法                            |
+
+### 4.1.3 jinfo：Java配置信息工具
+
+​	全称：Configuration Info for Java
+
+​	功能：实时地查看和调整虚拟机各项参数。使用jps命令的-v参数可以查看虚拟机启动时显式指定的参数列表，但如果想知道未被显式指定的参数的系统默认值，除了去找资料外，就只能使用jinfo的-flag选项进行查询了（如果只限于JDK 1.6或以上版本的话，使用java-XX：+PrintFlagsFinal查看参数默认值也是一个很好的选择），jinfo还可以使用-sysprops选项把虚拟机进程的System.getProperties（）的内容打印出来。JDK 1.6之后，jinfo在Windows和Linux平台都有提供，并且加入了运行期修改参数的能力，可以使用-flag[+|-]name或者-flag name=value修改一部分运行期可写的虚拟机参数值。
+
+​	jinfo命令格式：
+
+```text
+jinfo[option]pid
+```
+
+​	执行样例：
+
+```text
+C：\＞jinfo-flag CMSInitiatingOccupancyFraction 1444
+-XX：CMSInitiatingOccupancyFraction=85
+```
+
+### 4.1.4 jmap：Java内存映象工具
+
+​	全称：Memory Map for Java
+
+​	功能：命令用于生成堆转储快照（一般称为heapdump或dump文件）。jmap的作用并不仅仅是为了获取dump文件，它还可以查询finalize执行队列、Java堆和永久代的详细信息，如空间使用率、当前用的是哪种收集器等。
+
+​	如果不使用jmap命令，要想获取Java堆转储快照，还有一些比较“暴力”的手段：譬如在第2章中用过的-XX：+HeapDumpOnOutOfMemoryError参数，可以让虚拟机在OOM异常出现之后自动生成dump文件，通过-XX：+HeapDumpOnCtrlBreak参数则可以使用[Ctrl]+[Break]键让虚拟机生成dump文件，又或者在Linux系统下通过Kill-3命令发送进程退出信号“吓唬”一下虚拟机，也能拿到dump文件。
+
+​	jmap命令格式：
+
+```	text
+jmap[option]vmid
+```
+
+​	执行样例：
+
+```text
+C：\Users\IcyFenix＞jmap-dump：format=b,file=eclipse.bin 3500
+Dumping heap to C：\Users\IcyFenix\eclipse.bin……
+Heap dump file created
+```
+
+​	option选项的合法值与具体含义：
+
+| 选项             | 作用                                       |
+| -------------- | ---------------------------------------- |
+| -dump          | 生成Java堆转储快照。格式为：-dump:[live,]format=b,file=<filename>,其中live子参数说明是否只dump出存活的对象。 |
+| -finalizerinfo | 显示在F-Queue中等待Finalizer线程执行finalize方法的对象，只在Linux/Solaris平台下有效 |
+| -heap          | 显示Java堆详细信息，如使用哪种回收器、参数配置、分代状况等，只在Linux/Solaris平台下有效 |
+| -histo         | 显示堆中对象统计信息，包括类、实例数量、合计容量                 |
+| -permstat      | 以Class Loader为统计口径显示永久代内存状态。只在Linux/Solaris平台下有效 |
+| -F             | 当虚拟机进程对-dump选项没有响应时，可使用这个选项强制生成dump快照。只在Linux/Solaris平台下有效 |
+
+### 4.1.5 jhat：虚拟机堆转储快照分析工具
+
+​	全称：JVM Heap Analysis Tool
+
+​	功能：与jmap搭配使用，来分析jmap生成的堆转储快照。jhat内置了一个微型的HTTP/HTML服务器，生成dump文件的分析结果后，可以在浏览器中查看。
+
+​	在实际工作中，一般都不会去直接使用jhat命令来分析dump文件，主要原因有二：一是一般不会在部署应用程序的服务器上直接分析dump文件，即使可以这样做，也会尽量将dump文件复制到其他机器上进行分析，因为分析工作是一个耗时而且消耗硬件资源的过程，既然都要在其他机器进行，就没有必要受到命令行工具的限制了；另一个原因是jhat的分析功能相对来说比较简陋，VisualVM，以及专业用于分析dump文件的Eclipse Memory
+Analyzer、IBM HeapAnalyzer等工具，都能实现比jhat更强大更专业的分析功能。
+
+​	执行样例：
+
+```text
+C：\Users\IcyFenix＞jhat eclipse.bin
+Reading from eclipse.bin……
+Dump file created Fri Nov 19 22：07：21 CST 2010
+Snapshot read,resolving……
+Resolving 1225951 objects……
+Chasing references,expect 245 dots……
+Eliminating duplicate references……
+Snapshot resolved.
+Started HTTP server on port 7000
+Server is ready.
+```
+
+​	屏幕显示“Server is ready.”的提示后，用户在浏览器中键入http://localhost：7000/就可以看到分析结果
+
+### 4.1.6 jstack：Java堆栈跟踪工具
+
+​	全称：Stack Trace for Java
+
+​	功能：用于生成虚拟机当前时刻的线程快照（一般称为threaddump或者javacore文件）。线程快照就是当前虚拟机内每一条线程正在执行的方法堆栈的集合，生成线程快照的主要目的是定位线程出现长时间停顿的原因，如线程间死锁、死循环、请求外部资源导致的长时间等待等都是导致线程长时间停顿的常见原因。线程出现停顿的时候通过jstack来查看各个线程的调用堆栈，就可以知道没有响应的线程到底在后台做些什么事情，或者等待着什么资源。
+
+​	jstack命令格式：
+
+```text
+jstack[option]vmid
+```
+
+​	option选项的合法值与具体含义:
+
+| 选项   | 作用                       |
+| ---- | ------------------------ |
+| -F   | 当正常输出的请求不被响应时，强制输出线程堆栈   |
+| -l   | 除堆栈外，显示关于锁的附加信息          |
+| -m   | 如果调用到本地方法的话，可以显示C/C++的堆栈 |
+
+​	执行样例：
+
+```text
+C：\Users\IcyFenix＞jstack-l 3500
+2010-11-19 23：11：26
+Full thread dump Java HotSpot（TM）64-Bit Server VM（17.1-b03 mixed mode）：
+"[ThreadPool Manager]-Idle Thread"daemon prio=6 tid=0x0000000039dd4000 nid=0xf50 in Object.wait（）[0x000000003c96f000]
+java.lang.Thread.State：WAITING（on object monitor）
+at java.lang.Object.wait（Native Method）
+-waiting on＜0x0000000016bdcc60＞（a org.eclipse.equinox.internal.util.impl.tpt.threadpool.Executor）
+at java.lang.Object.wait（Object.java：485）
+at org.eclipse.equinox.internal.util.impl.tpt.threadpool.Executor.run（Executor.java：106）
+-locked＜0x0000000016bdcc60＞（a org.eclipse.equinox.internal.util.impl.tpt.threadpool.Executor）
+Locked ownable synchronizers：
+-None
+```
+
+​	在JDK 1.5中，java.lang.Thread类新增了一个getAllStackTraces（）方法用于获取虚拟机中所有线程的StackTraceElement对象。使用这个方法可以通过简单的几行代码就完成jstack的大部分功能，在实际项目中不妨调用这个方法做个管理员页面，可以随时使用浏览器来查看线程堆栈。
+
+### 4.1.7 HSDIS：JIT生成代码反汇编
+
+​	在Java虚拟机规范中，详细描述了虚拟机指令集中每条指令的执行过程、执行前后对操作数栈、局部变量表的影响等细节。这些细节描述与Sun的早期虚拟机（Sun Classic VM）高度吻合，但随着技术的发展，高性能虚拟机真正的细节实现方式已经渐渐与虚拟机规范所描述的内容产生了越来越大的差距，虚拟机规范中的描述逐渐成了虚拟机实现的“概念模型”——即实现只能保证规范描述等效。基于这个原因，我们分析程序的执行语义问题（虚拟机做了什么）时，在字节码层面上分析完全可行，但分析程序的执行行为问题（虚拟机是怎样做的、性能如何）时，在字节码层面上分析就没有什么意义了，需要通过其他方式解决。
+
+​	分析程序如何执行，通过软件调试工具（GDB、Windbg等）来断点调试是最常见的手段，但是这样的调试方式在Java虚拟机中会遇到很大困难，因为大量执行代码是通过JIT编译器动态生成到CodeBuffer中的，没有很简单的手段来处理这种混合模式的调试（不过相信虚拟机开发团队内部肯定是有内部工具的）。
+
+​	HSDIS是一个Sun官方推荐的HotSpot虚拟机JIT编译代码的反汇编插件，它包含在HotSpot虚拟机的源码之中，但没有提供编译后的程序。在Project Kenai的网站也可以下载到单独的源码。它的作用是让HotSpot的-XX：+PrintAssembly指令调用它来把动态生成的本地代码还原为汇编代码输出，同时还生成了大量非常有价值的注释，这样我们就可以通过输出的代码来分析问题。
+
+​	可以根据自己的操作系统和CPU类型从Project Kenai的网站上下载编译好的插件，直接放到JDK_HOME/jre/bin/client和JDK_HOME/jre/bin/server目录中即可。如果没有找到所需操作系统（譬如Windows的就没有）的成品，那就得自己使用源码编译一下。
+
+​	还需要注意的是，如果使用的是Debug或者FastDebug版的HotSpot，那可以直接通过-XX：+PrintAssembly指令使用插件；如果使用的是Product版的HotSpot，那还要额外加入一个-XX：+UnlockDiagnosticVMOptions参数。
+
+​	测试代码：
+
+```java
+public class Bar{
+	int a=1；
+	static int b=2；
+	public int sum（int c）{
+		return a+b+c；
+	}
+  
+	public static void main（String[]args）{
+		new Bar（）.sum（3）；
+	}
+}
+```
+
+​	编译这段代码，并使用以下命令执行。
+
+```text
+java-XX：+PrintAssembly-Xcomp-XX：CompileCommand=dontinline，*Bar.sum-XX：Compi leCommand=compileonly，*Bar.sum test.Bar
+```
+
+​	其中，参数-Xcomp是让虚拟机以编译模式执行代码，这样代码可以“偷懒”，不需要执行足够次数来预热就能触发JIT编译 [3] 。两个-XX：CompileCommand意思是让编译器不要内联sum（）并且只编译sum（），-XX：+PrintAssembly就是输出反汇编内容。
+
+​	如果执行顺利就会出现如下代码：
+
+```text
+[Disassembling for mach='i386']
+[Entry Point]
+[Constants]
+#{method}'sum''（I）I'in'test/Bar'
+#this：ecx='test/Bar'
+#parm0：edx=int
+#[sp+0x20]（sp of caller）
+……
+0x01cac407：cmp 0x4（%ecx），%eax
+0x01cac40a：jne 0x01c6b050；{runtime_call}
+[Verified Entry Point]
+0x01cac410：mov%eax，-0x8000（%esp）
+0x01cac417：push%ebp
+0x01cac418：sub$0x18，%esp；*aload_0
+；-test.Bar：sum@0（line 8）
+；block B0[0，10]
+0x01cac41b：mov 0x8（%ecx），%eax；*getfield a
+；-test.Bar：sum@1（line 8）
+0x01cac41e：mov$0x3d2fad8，%esi；{oop（a
+'java/lang/Class'='test/Bar'）}
+0x01cac423：mov 0x68（%esi），%esi；*getstatic b
+；-test.Bar：sum@4（line 8）
+0x01cac426：add%esi，%eax
+0x01cac428：add%edx，%eax
+0x01cac42a：add$0x18，%esp
+0x01cac42d：pop%ebp
+0x01cac42e：test%eax，0x2b0100；{poll_return}
+0x01cac434：ret
+```
+
+逐行解释：
+
+1）mov%eax，-0x8000（%esp）：检查栈溢。
+
+2）push%ebp：保存上一栈帧基址。
+
+3）sub$0x18，%esp：给新帧分配空间。
+
+4）mov 0x8（%ecx），%eax：取实例变量a，这里0x8（%ecx）就是ecx+0x8的意思，前面“[Constants]”节中提示了“this：ecx='test/Bar'”，即ecx寄存器中放的就是this对象的地址。偏移0x8是越过this对象的对象头，之后就是实例变量a的内存位置。这次是访问“Java堆”中的数据。
+
+5）mov$0x3d2fad8，%esi：取test.Bar在方法区的指针。
+
+6）mov 0x68（%esi），%esi：取类变量b，这次是访问“方法区”中的数据。
+
+7）add%esi，%eax和add%edx，%eax：做两次加法，求a+b+c的值，前面的代码把a放在eax中，把b放在esi中，而c在[Constants]中提示了，“parm0：edx=int”，说明c在edx中。
+
+8）add$0x18，%esp：撤销栈帧。
+
+9）pop%ebp：恢复上一栈帧。
+
+10）test%eax，0x2b0100：轮询方法返回处的SafePoint。
+
+11）ret：方法返回。
+
+## 4.2 JDK的可视化工具
+
+​	JDK中除了提供大量的命令行工具外，还有两个功能强大的可视化工具：JConsole和VisualVM，这两个工具是JDK的正式成员。
+
+​	JConsole是在JDK1.5发布的虚拟机监控工具，VisualVM是在JDK1.6发布的多合一故障处理工具。
+
+###4.2.1 JConsole：Java监视与管理控制台 
+
+​	全称：Java Monitoring and Management Console
+
+​	功能：一种基于JMX的可视化监视、管理工具。它管理部分的功能是针对JMX MBean进行管理。MBean可以使用代码、中间件服务器的管理控制台或者所有符合JMX规范的软件进行访问。这里着重介绍监视功能。
+
+​	1.启动JConsole
+
+​	通过JDK/bin目录下的“jconsole.exe”启动JConsole后，将自动搜索出本机运行的所有虚拟机进程，不需要用户自己再使用jps来查询了。双击选择其中一个进程即可开始监控，也可以使用下面的“远程进程”功能来连接远程服务器，对远程虚拟机进行监控。
+
+​	进入JConsole主界面，可以看到主界面里共包括“概述”、“内存”、“线程”、“类”、“VM摘要”、“MBean”6个页签。
+
+​	“概述”页签显示的是整个虚拟机主要运行数据的概览，其中包括“堆内存使用情况”、“线程”、“类”、“CPU使用情况”4种信息的曲线图，这些曲线图是后面“内存”、“线程”、“类”页签的信息汇总。
+
+​	2.内存监控
+
+​	“内存”页签相当于可视化的jstat命令，用于监视受收集器管理的虚拟机内存（Java堆和永久代）的变化趋势。
+
+​	3.线程监控
+
+​	“线程”页签的功能相当于可视化的jstack命令，遇到线程停顿时可以使用这个页签进行监控分析。线程长时间停顿的主要原因主要有：等待外部资源（数据库连接、网络资源、设备资源等）、死循环、锁等待（活锁和死锁）。
+
+​	出现线程死锁之后，点击JConsole线程面板的“检测到死锁”按钮，将出现一个新的“死锁”页签
+
+###4.2.2 VisualVM：多合一故障处理工具 
+
+​	全称：All-in-One Java Troubleshooting Tool
+
+​	功能：到目前为止随JDK发布的功能最强大的运行监视和故障处理程序。除了运行监视、故障处理外，还提供了很多其他方面的功能。如性能分析（Profiling），VisualVM的性能分析功能甚至比起JProfiler、YourKit等专业且收费的Profiling工具都不会逊色多少，而且VisualVM的还有一个很大的优点：不需要被监视的程序基于特殊Agent运行，因此它对应用程序的实际性能的影响很小，使得它可以直接应用在生产环境中。这个优点是JProfiler、YourKit等工具无法与之媲美的。
+
+​	1.VisualVM兼容范围与插件安装
+
+​	tgv基于NetBeans平台开发，因此它一开始就具备了插件扩展功能的特性，通过插件扩展支持，VisualVM可以做到：
+
+- 显示虚拟机进程以及进程的配置、环境信息（jps、jinfo）。
+
+- 监视应用程序的CPU、GC、堆、方法区以及线程的信息（jstat、jstack）。
+
+- dump以及分析堆转储快照（jmap、jhat）。
+
+- 方法级的程序运行性能分析，找出被调用最多、运行时间最长的方法。
+
+- 离线程序快照：收集程序的运行时配置、线程dump、内存dump等信息建立一个快照，可以将快照发送开发者处进行Bug反馈。
+
+- 其他plugins的无限的可能性……
+
+  ​
+
+  虽然VisualVM是JDK1.6才发布的，但它具备很强的向下兼容能力，甚至能向下兼容至近10年前发布的JDK 1.4.2平台，这对无数已经处于实施、维护的项目很有意义。
+
+
+
+自带的插件中心URL可能无法访问，需要去https://visualvm.github.io/pluginscenters.html根据JDK版本查找对应的URL地址
