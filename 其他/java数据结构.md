@@ -1314,6 +1314,211 @@ public class Sum {
 
 通过数组来实现链表，每个节点保存下一个节点在数组中的索引。
 
+## 2.5 哈希表
+
+###2.5.1 概述
+
+​	哈希表也成散列表，是一种可以通过key直接进行访问的数据结构，通过哈希函数将key转化为索引，通过索引直接对数据结构进行快速访问。
+
+​	哈希表所需要考虑的问题：1.哈希函数。2.哈希冲突。
+
+​	哈希表充分的体现了算法领域的经典思想：空间换时间。
+
+​	如果我们有足够的空间，我们可以用O(1)的时间来完成各项操作。而如果我们只有1的空间，我们则需要O(n)的时间来完成各项操作（线性表）。
+
+​	而哈希表就是时间和空间之间的平衡。哈希函数的设计很重要，且key通过哈希函数得到的索引，分布的越均匀越好。
+
+### 2.5.2 哈希函数的设计
+
+​	哈希函数的设计是一个很复杂的操作，对于一些特殊的领域，有特殊的哈希函数设计方式，甚至是专门的论文，这里只关注一般性的哈希函数。哈希函数的设计索引分布越均匀越好
+
+​	1.整型
+
+小范围的正整数直接使用
+
+小范围的负整数进行偏移：-100~100 ---》 0~200
+
+对于大整数：
+
+​	通常的做法是取模，如对10000取模相当于取大整数的后4位。
+
+​	但是对于直接取后几位数的做法不可取，因为没有利用到整个大整数的全部信息，解决这个问题简单的做法是模一个素数。但是还是要具体问题具体分析，如身份证号，数字是有意义的，我们需要根据实际情况进行考虑。
+
+​	在https://planetmath.org/goodhashtableprimes中有对各个规模大整数取模素数的介绍。
+
+​	2.浮点型
+
+​	浮点数在计算机中都是以32位或64位的二进制表示，只不过计算机解析成了浮点数，我们只需要将这个32位或64位二进制数当做整型处理即可。
+
+​	3.字符串
+
+​	字符串一般也是将其转为整型数处理。
+
+​	hash(code)=(c\*B^3 + o\*B^2 + d\*B^1 + e\*B^0) % M
+
+​	为了提高运算效率，上式可改为：hash(code)=((((c * B) + o) * B + d) * B + e) % M
+
+​	为了防止整型溢出，上式可以改为：hash(code)=(((((c % M) * B + o) % M * B + d) % M * B + e) % M
+
+​	4.复合类型
+
+​	与字符串的处理方式类似，也是转成整型数处理。
+
+注意：转成整型处理不是唯一的处理方式，这只是一个较为通用的方法。
+
+哈希函数设计需要遵循的三个原则：
+
+​	1.一致性：如果a==b，则hash(a)==hash(b)
+
+​	2.高效性：计算高效方便
+
+​	3.均匀性：哈希值均匀分布
+
+### 2.5.3 Java中的hashCode
+
+​	在Java中，Object类有一个hashCode方法，每个类可以通过重写覆盖Object类中的默认方法，当我们将对象存入哈希表时，会调用hashCode方法计算对应的索引值。而当出现哈希冲突时，通过调用equals方法来判断是否是同一对象。
+
+​	java中实现的哈希表，hashMap和hashSet，对于哈希冲突的解决办法是采用链地址法，即分配M大小的空间对应每一个索引。每个索引对应一个链表来保存哈希冲突的。在Java8以前，每个位置就是对应一个链表，Java8之后，当哈希冲突达到一定程度，会自动从链表转换成红黑树。
+
+​	注：转成红黑树是有前提的，那就是key的类型实现Comparable接口，否则还是以链表形式存在。
+
+### 2.5.4 HashTable的实现
+
+```java
+public class HashTable<K,V> {
+
+    private TreeMap<K,V>[] hashtable;
+
+    //与静态数组一样，固定空间大小是有缺陷的，所以我们需要根据情况对地址空间进行resize
+    private static final int upperTol = 10;//平均每个地址下元素达到10个，即进行扩容
+    private static final int lowerTol = 2;//平均每个地址下元素低于2个，即进行缩容
+    private static final int initCapacity = 7;//初始空间大小
+
+    private int M;
+    private int size;
+
+    public HashTable(int M){
+        this.M = M;
+        size = 0;
+        hashtable = new TreeMap[M];
+        for (int i = 0; i < M; i ++){
+            hashtable[i] = new TreeMap<>();
+        }
+    }
+
+    public HashTable(){
+        this(initCapacity);
+    }
+
+    private int hash(K key){
+        // & 0x7fffffff 是为了消除符号位，将所有hashCode转为正数
+        return (key.hashCode() & 0x7fffffff) % M;
+    }
+
+    public int getSize(){
+        return size;
+    }
+
+    public void add(K key,V value){
+        TreeMap<K,V> map = hashtable[hash(key)];
+        if(map.containsKey(key)){
+            //已存在，修改
+            map.put(key,value);
+        }else{
+            //不存在，新增
+            map.put(key,value);
+            size ++;
+
+            //在新增元素后，判断是否需要扩容
+            if(size >= upperTol * M){
+                resize(2 * M);
+            }
+        }
+    }
+
+    public V remove(K key){
+        TreeMap<K,V> map = hashtable[hash(key)];
+        V ret = null;
+        if(map.containsKey(key)){
+            ret = map.remove(key);
+            size --;
+
+            //删除元素后，判断是否需要缩容
+            if(size < lowerTol * M && M/2 >= initCapacity){
+                resize(M / 2);
+            }
+        }
+        return ret;
+    }
+
+    public void set(K key,V value){
+        TreeMap<K,V> map = hashtable[hash(key)];
+        if(!map.containsKey(key)){
+            throw new IllegalArgumentException(key + "doesn's exist!");
+        }
+
+        map.put(key,value);
+    }
+
+    public boolean contains(K key){
+        return hashtable[hash(key)].containsKey(key);
+    }
+
+    public V get(K key){
+        return hashtable[hash(key)].get(key);
+    }
+
+    private void resize(int newM){
+        //新建一个newM大小的TreeMap数组
+        TreeMap<K,V>[] newHashTable = new TreeMap[newM];
+        for(int i = 0;i < newM;i ++){
+            newHashTable[i] = new TreeMap<>();
+        }
+
+        int oldM = M;
+        this.M = newM;
+        for(int i = 0;i < oldM;i ++){
+            TreeMap<K,V> map = newHashTable[i];
+            for(K key:map.keySet()){
+                newHashTable[hash(key)].put(key,map.get(key));
+            }
+        }
+
+        this.hashtable = newHashTable;
+    }
+}
+```
+
+### 2.5.5 时间复杂度分析
+
+​	扩容和缩容的操作时间复杂度为O(n)，但是扩容和缩容操作并不是每次都要进行。而其他的增删改查的复杂度在O(lowerTol)~O(upperTol)之间，所以对于哈希表来说均摊复杂度为O(1)。
+
+​	哈希表在实现O(1)级别均摊复杂度的同时，牺牲了数据的顺序性。
+
+### 2.5.6 更复杂的动态空间处理方式
+
+​	由于通过扩容到2*M大小会导致M不是素数，所以我们可以参照https://planetmath.org/goodhashtableprimes上给出的表来进行扩容。
+
+### 2.5.7 其他处理哈希冲突的方法
+
+​	1.开放地址法
+
+​	每一个地址空间存放一个元素
+
+​	线性探测：当出现哈希冲突后，依次寻找当前位置+1的地址，直到找到空位置为止。
+
+​	平方探测：当出现哈希冲突后，依次寻找+i^2位置。
+
+​	二次哈希：当第一个地址被占用，使用第二个哈希函数重新计算，寻找+hash2(key)地址
+
+​	2.再哈希法
+
+​	第一个哈希函数出现冲突，就是用另外一个哈希函数进行计算
+
+​	3.Coalesced Hashing
+
+​	综合了链地址法和开放地址法
+
 # 三、树结构
 
 ​	树结构是一种天然的组织结构，如计算机文件系统、图书馆、公司组织结构等等都是采用的树结构。树结构的优势在于高效，将数据使用树结构存储后，可能会出奇的高效。
@@ -2031,7 +2236,844 @@ public class SegmentTree<E> {
 
 ​	Trie，称为字典树或前缀树。不属于二叉树，主要用于处理字符串的问题。考虑到不同的语言和不同的使用情景，每个节点包含若干个指向下一个节点的指针。
 
+### 3.4.1 Trie实现
 
+```java
+public class Trie {
+
+    //通过内部类来实现Trie的节点
+    private class Node{
+        public boolean isWord;//到当前节点为止为一个单词
+        public TreeMap<Character,Node> next;
+
+        public Node(boolean isWord){
+            this.isWord = isWord;
+            next = new TreeMap<>();
+        }
+
+        public Node(){
+            this.isWord = false;
+        }
+    }
+
+    private Node root;//根节点
+    private int size;//当前存储的单词数量
+
+
+    public Trie(){
+        root = new Node();
+        size = 0;
+    }
+
+    //获得Trie中存储的单词数量
+    public int getSize(){
+        return size;
+    }
+
+    public void add(String word){
+        Node cur = root;
+
+        for(int i = 0;i < word.length(); i++){
+            char c = word.charAt(i);
+            if(cur.next.get(c) == null){
+                cur.next.put(c,new Node());
+            }
+            cur = cur.next.get(c);
+        }
+
+        if(!cur.isWord){
+            cur.isWord = true;
+            size++;
+        }
+    }
+
+    // 查询Trie中是否存在单词word
+    public boolean contains(String word){
+        Node cur = root;
+        for(int i = 0;i < word.length(); i++){
+            char c = word.charAt(i);
+
+            //如果为null，说明没有这个单词
+            if(cur.next.get(c) == null){
+                return false;
+            }
+
+            cur = cur.next.get(c);
+        }
+
+        //循环结束，判断isWord的值，为true就是有这个单词
+        return cur.isWord;
+    }
+
+    //查询Trie中是否有单词以prefix为前缀
+    public boolean isPrefix(String prefix){
+        Node cur = root;
+
+        for(int i = 0;i < prefix.length(); i++){
+            char c = prefix.charAt(i);
+
+            if(cur.next.get(c) == null){
+                return false;
+            }
+
+            cur = cur.next.get(c);
+        }
+
+        return true;
+    }
+
+    //匹配带通配符“.”的字符串
+    public boolean match(String word){
+        return match(root,word,0);
+    }
+
+    //从Node节点开始匹配从index字符以后的word
+    private boolean match(Node node,String word,int index){
+
+        if(index == word.length()){
+            return node.isWord;
+        }
+
+        char c = word.charAt(index);
+
+        if(c != '.'){
+            if(node.next.get(c) == null){
+                return false
+            }
+
+            return match(node.next.get(c),word,index + 1);
+        }else{
+            //如果是通配符“.”，则要遍历下面所有节点
+            for(char nextChar:node.next.keySet()){
+                if(match(node.next.get(nextChar) , word , index + 1)){
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+}
+```
+
+### 3.4.2 Trie的局限性
+
+​	Trie最大的问题就是空间占用大。对于这个问题出现了Trie的一些变种。
+
+​	1.压缩字典树，对于单链的节点可以合并为一个。
+
+​	2.通过三分搜索树实现字典树
+
+## 3.5 并查集
+
+​	并查集用于解决网络中节点连接状态问题。
+
+并查集接口：
+
+```java
+/**
+ * 并查集接口
+ */
+public interface UF {
+    int getSize();
+    boolean isConnected(int p,int q);
+    void unionElements(int p,int q);
+}
+```
+
+
+
+###3.5.1 基于数组的实现 
+
+```java
+/**
+ * 第一版并查集，通过数组实现并查集，查询操作较快，一般不这样实现
+ */
+public class QuickFind implements UF {
+
+    private int[] id;
+
+    public QuickFind(int size){
+        id = new int[size];
+
+        for(int i = 0; i < id.length; i++){
+            id[i] = i;
+        }
+    }
+
+    @Override
+    public int getSize() {
+        return id.length;
+    }
+
+    // 查找元素p所属的集合编号
+    private int find(int p){
+        if(p < 0 || p >= id.length){
+            throw new IllegalArgumentException("p is out of bound.");
+        }
+
+        return id[p];
+    }
+
+    // 查看元素p和元素q是否属于同一个集合，时间复杂度为O(1)
+    @Override
+    public boolean isConnected(int p, int q) {
+        return find(p) == find(q);
+    }
+
+    // 合并元素p和元素q所在的集合 这个操作需要遍历整个数组，所以时间复杂度为O(n)
+    @Override
+    public void unionElements(int p, int q) {
+        int pID = find(p);
+        int qID = find(q);
+
+        //如果元素p和元素q所在的集合编号一样，那么本来就在同一个集合中，不需要再合并
+        if(pID == qID){
+            return;
+        }
+
+        // 遍历数组，将与p元素同一集合的所有元素修改为和q元素集合编号相同。实现合并
+        for(int i = 0 ; i < id.length ; i++){
+            if(id[i] == pID){
+                id[i] = qID;
+            }
+        }
+    }
+}
+```
+
+### 3.5.2 基于树的实现
+
+```java
+/**
+ * 基于树的实现，与一般的树结构不一样，这个树结构是子节点指向父节点
+ * 由于每个节点只包含一个指向父节点的引用，所以底层一样可以通过数组来实现
+ *
+ * 优化：
+ *      1.基于size的优化，在合并的时候元素少的树指向元素多的树的根节点，这样可以降低树的深度
+ *      缺点：基于树的并查集复杂度与树的深度有关，但是size大的树不一定深度更大
+ *
+ *      2.基于rank的优化，深度低的树指向深度高的树的根节点
+ *
+ *      3.路径压缩，对于并查集来说，复杂度与树的深度有关，我们通过降低树的深度的方式，可以提高效率
+ *
+ */
+public class QuickUnion implements UF {
+
+    private int[] parent;
+    //private int[] sz;//sz[i]表示以i为根的集合中的元素个数
+    private int[] rank;//rank[i]表示以i为根的集合的深度
+
+
+    public QuickUnion(int size){
+        parent = new int[size];
+        //sz = new int[size];
+        rank = new int[size];
+
+        for(int i:parent){
+            parent[i] = i;
+            //sz[i] = 1;//初始化的时候所有集合的元素个数都是1
+            rank[i] = 1;//初始化时所有树的深度都为1
+        }
+    }
+
+    @Override
+    public int getSize() {
+        return parent.length;
+    }
+
+    // 查找元素p所在树的根节点
+    // 查找操作的时间复杂度为O(h)，h为p元素所在树的深度
+    private int find(int p){
+        if(p < 0 || p >= parent.length){
+            throw new IllegalArgumentException("p is out of bound.");
+        }
+
+//        while (p != parent[p]){
+//            //执行路径压缩。让节点p指向其父节点的父节点，从而降低树的深度
+//            parent[p] = parent[parent[p]];
+//            p = parent[p];
+//        }
+//        return p;
+        while (p != parent[p]){
+            //通过递归实现路径压缩，让节点都指向根节点
+            parent[p] = find(parent[p]);
+        }
+        return parent[p];
+    }
+
+    // 判断元素p和元素q是否同属一个集合，即根节点是否一致
+    @Override
+    public boolean isConnected(int p, int q) {
+        return find(p) == find(q);
+    }
+
+    // 合并元素p和元素q所在的集合
+    @Override
+    public void unionElements(int p, int q) {
+        int pRoot = find(p);
+        int qRoot = find(q);
+
+        if(pRoot == qRoot){
+            return;
+        }
+
+        //parent[pRoot] = qRoot;
+
+        //在合并的时候，元素个数少的树指向元素多的树的根节点
+//        if(sz[pRoot] < sz[qRoot]){
+//            parent[pRoot] = qRoot;
+//            sz[qRoot] += sz[pRoot];
+//        }else{
+//            parent[qRoot] = pRoot;
+//            sz[pRoot] += sz[qRoot];
+//        }
+
+        //将rank低的集合合并到rank高的集合上
+        if(rank[pRoot] < rank[qRoot]){
+            parent[pRoot] = qRoot;
+        }else if (rank[qRoot] < rank[pRoot]){
+            parent[qRoot] = pRoot;
+        }else{
+            //当两个树深度相同时，合并后深度将会加1
+            parent[qRoot] = pRoot;
+            rank[pRoot] += 1;
+        }
+    }
+}
+```
+
+## 3.6 AVL树
+
+平衡二叉树：对于任意一个节点，左子树和右子树的高度差不能超过1。
+
+平衡二叉树的高度和节点数量之间的关系是O(logn)。
+
+而AVL树是最早的自平衡二叉树。
+
+### 3.6.1 AVL树的实现
+
+```java
+public class AVLTree<K extends Comparable<K>,V> {
+
+    private class Node{
+        public K key;
+        public V value;
+        public Node left,right;
+        public int height;//记录每个节点的高度
+
+        public Node(K key,V value){
+            this.key = key;
+            this.value = value;
+            left = null;
+            right = null;
+            height = 1;
+        }
+    }
+
+    private Node root;
+    private int size;
+
+    public AVLTree(){
+        root = null;
+        size = 0;
+    }
+
+    public int getSize() {
+        return size;
+    }
+
+    public boolean isEmpty() {
+        return size == 0;
+    }
+
+    //获得节点的高度值
+    private int getHeight(Node node){
+        if(node == null){
+            return 0;
+        }else{
+            return node.height;
+        }
+    }
+
+    //获取节点node的平衡因子
+    private int getBalanceFactor(Node node){
+        if(node == null){
+            return 0;
+        }
+
+        return getHeight(node.left) - getHeight(node.right);
+    }
+
+    //判断该二叉树是不是一个二分搜索树
+    public boolean isBST(){
+        ArrayList<K> keys = new ArrayList<>();
+        inOrder(root,keys);
+        //判断中序遍历后整个集合是否是升序的，如果不是则这个树不是二分搜索树
+        for(int i = 0;i < keys.size(); i ++){
+            if(keys.get(i-1).compareTo(keys.get(i)) > 0){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    //中序遍历整棵树，将key依次放入list集合中
+    private void inOrder(Node node,ArrayList<K> keys){
+        if(node == null){
+            return;
+        }
+
+        inOrder(node.left,keys);
+        keys.add(node.key);
+        inOrder(node.right,keys);
+    }
+
+    // 对元素y进行右旋转，返回新的根节点x
+    //       y                     x
+    //      / \                  /   \
+    //     x  T4   右旋转        z     y
+    //    / \      ------->    / \   / \
+    //   z  T3                T1 T2 T3 T4
+    //  / \
+    // T1 T1
+    private Node rightRotate(Node y){
+        Node x = y.left;
+        Node T3 = x.right;
+
+        // 向右旋转
+        x.right = y;
+        y.left = T3;
+
+        // 更新height
+        y.height = Math.max(getHeight(y.left),getHeight(y.right)) + 1;
+        x.height = Math.max(getHeight(x.left),getHeight(x.right)) + 1;
+
+        return x;
+    }
+
+    // 左旋转的方式与右旋转对称
+    private Node leftRotate(Node y) {
+        Node x = y.right;
+        Node T2 = x.left;
+
+        //向左旋转过程
+        x.left = y;
+        y.right = T2;
+
+        // 更新height
+        y.height = Math.max(getHeight(y.left),getHeight(y.right)) + 1;
+        x.height = Math.max(getHeight(x.left),getHeight(x.right)) + 1;
+
+        return x;
+    }
+    //判断该树是否是一棵平衡二叉树
+    public boolean isBalanced(){
+        return isBalanced(root);
+    }
+
+    //判断以node为根节点的树是否为平衡二叉树
+    private boolean isBalanced(Node node){
+        if(node == null){
+            return true;
+        }
+
+        int balanceFactor = getBalanceFactor(node);
+        if(Math.abs(balanceFactor) > 1){
+            return false;
+        }
+
+        return isBalanced(node.left) && isBalanced(node.right);
+    }
+
+    //添加新元素
+    public void add(K key,V value){
+        root = add(root,key,value);
+    }
+
+    //向以node为根节点的树添加元素
+    private Node add(Node node,K key,V value){
+        if(node == null){
+            size ++;
+            return new Node(key,value);
+        }
+
+        if(key.compareTo(node.key) < 0){
+            node.left = add(node.left,key,value);
+        }else if(key.compareTo(node.key) > 0){
+            node.right = add(node.right,key,value);
+        }else{
+            node.value = value;
+        }
+
+        //更新节点的height值
+        node.height = 1 + Math.max(getHeight(node.left),getHeight(node.right));
+
+        //计算平衡因子
+        int balanceFactor = getBalanceFactor(node);
+
+        //LL情形
+        // 当前node节点的平衡因子大于1且当前节点的左子节点平衡因子大于等于0说明以node为根的树向左倾斜，需要右旋转
+        if(balanceFactor > 1 && getBalanceFactor(node.left) >=0 ){
+            return rightRotate(node);
+        }
+
+        //RR情形
+        // 当前node节点的平衡因子小于-1且当前节点的右子节点平衡因子小于等于0说明以node为根的树向右倾斜，需要左旋转
+        if(balanceFactor < -1 && getBalanceFactor(node.right) <=0 ){
+            return leftRotate(node);
+        }
+
+        //LR
+        if(balanceFactor > 1 && getBalanceFactor(node.left) < 0 ){
+            node.left = leftRotate(node.left);
+            return rightRotate(node);
+        }
+
+        //RL
+        if(balanceFactor < -1 && getBalanceFactor(node.right) > 0 ){
+            node.right = rightRotate(node.right);
+            return leftRotate(node);
+        }
+
+        return node;
+    }
+
+    /**
+     * 返回key所对应的节点
+     * @param node
+     * @param key
+     * @return
+     */
+    private Node getNode(Node node,K key){
+        if(node == null){
+            return null;
+        }
+
+        if(key.compareTo(node.key) == 0){
+            return node;
+        }else if(key.compareTo(node.key) < 0){
+            return getNode(node.left,key);
+        }else{
+            return getNode(node.right,key);
+        }
+    }
+
+    /**
+     * 判断是否包含key
+     * @param key
+     * @return
+     */
+    public boolean contains(K key) {
+        return getNode(root,key) != null;
+    }
+
+    /**
+     * 获取key对应的value
+     * @param key
+     * @return
+     */
+    public V get(K key) {
+        Node node = getNode(root,key);
+        return node == null?null:node.value;
+    }
+
+    /**
+     * 将key对应的value替换为newValue
+     * @param key
+     * @param newValue
+     */
+    public void set(K key, V newValue) {
+
+        Node node = getNode(root,key);
+
+        if(node == null){
+            throw new IllegalArgumentException(key + "dosen't exist!");
+        }
+
+        node.value = newValue;
+    }
+
+    /**
+     * 删除key对应的节点
+     * @param key
+     * @return
+     */
+    public V remove(K key) {
+        Node node = getNode(root,key);
+
+        if(node != null){
+            root = remove(root,key);
+            return root.value;
+        }
+
+        return null;
+    }
+
+    private Node remove(Node node,K key){
+        if(node == null){
+            return null;
+        }
+
+        //用来保存我们要返回的node，用以平衡维护
+        Node retNode;
+
+        if(key.compareTo(node.key) < 0){
+            node.left = remove(node.left, key);
+            retNode = node;
+        }else if(key.compareTo(node.key) > 0){
+            node.right = remove(node.right,key);
+            retNode = node;
+        }else{
+
+            if(node.left == null){
+                // 待删除节点左子树为空的情况
+                Node rightNode = node.right;
+                node.right = null;
+                size --;
+                retNode = rightNode;
+            }else if(node.right == null){
+                // 待删除节点右子树为空的情况
+                Node leftNode = node.left;
+                node.left = null;
+                size --;
+                retNode = leftNode;
+            }else{
+                // 待删除节点左右子树均不为空的情况
+
+                // 找到比待删除节点大的最小节点, 即待删除节点右子树的最小节点
+                // 用这个节点顶替待删除节点的位置
+                Node successor = minimum(node.right);
+
+                // 因为removeMin方法中没有添加平衡维护代码，所以我们直接调用remove方法
+                //successor.right = removeMin(node.right);
+                successor.right = remove(node.right,successor.key);
+                successor.left = node.right = null;
+                retNode = successor;
+            }
+        }
+
+        if(retNode == null){
+            return retNode;
+        }
+
+        //更新节点的height值
+        retNode.height = 1 + Math.max(getHeight(retNode.left),getHeight(retNode.right));
+
+        //计算平衡因子
+        int balanceFactor = getBalanceFactor(retNode);
+
+        //LL情形
+        // 当前node节点的平衡因子大于1且当前节点的左子节点平衡因子大于等于0说明以node为根的树向左倾斜，需要右旋转
+        if(balanceFactor > 1 && getBalanceFactor(retNode.left) >=0 ){
+            return rightRotate(retNode);
+        }
+
+        //RR情形
+        // 当前node节点的平衡因子小于-1且当前节点的右子节点平衡因子小于等于0说明以node为根的树向右倾斜，需要左旋转
+        if(balanceFactor < -1 && getBalanceFactor(retNode.right) <=0 ){
+            return leftRotate(retNode);
+        }
+
+        //LR
+        if(balanceFactor > 1 && getBalanceFactor(retNode.left) < 0 ){
+            retNode.left = leftRotate(retNode.left);
+            return rightRotate(retNode);
+        }
+
+        //RL
+        if(balanceFactor < -1 && getBalanceFactor(retNode.right) > 0 ){
+            retNode.right = rightRotate(retNode.right);
+            return leftRotate(retNode);
+        }
+
+        return retNode;
+    }
+
+    // 返回以node为根的二分搜索树的最小值所在的节点
+    private Node minimum(Node node){
+        if(node.left == null)
+            return node;
+        return minimum(node.left);
+    }
+
+    // 删除掉以node为根的二分搜索树中的最小节点
+    // 返回删除节点后新的二分搜索树的根
+    private Node removeMin(Node node){
+
+        if(node.left == null){
+            Node rightNode = node.right;
+            node.right = null;
+            size --;
+            return rightNode;
+        }
+
+        node.left = removeMin(node.left);
+        return node;
+    }
+
+}
+```
+
+##3.7 红黑树
+
+### 3.7.1 2-3树
+
+​	2-3树满足二分搜索树的基本性质，即每个节点大于其左子节点的值，且小于其右子节点的值。但是2-3树存在两种节点，节点可以存放一个元素或两个元素。一个元素的节点与二分搜索树一样，而两个元素的节点会存在3个子节点，小于两个元素，两个元素之间和大于两个元素。
+
+​	2-3树是一棵绝对平衡的树，即任意一个元素的左右子节点高度都是相同的。
+
+​	而红黑树本质上是与2-3树等价的
+
+### 3.7.2 红黑树的实现
+
+```java
+public class RBTree<K extends Comparable<K>,V> {
+
+    private static final boolean RED = true;
+    private static final boolean BLACK = false;
+    private class Node{
+        public K key;
+        public V value;
+        public Node left,right;
+        public boolean color;
+
+        public Node(K key,V value){
+            this.key = key;
+            this.value = value;
+            left = null;
+            right = null;
+            color = RED;
+        }
+    }
+
+    private Node root;
+    private int size;
+
+    public RBTree(){
+        root = null;
+        size = 0;
+    }
+
+    /**
+     * 获取当前树中元素
+     *
+     * @return
+     */
+    public int size() {
+        return size;
+    }
+
+    /**
+     * 当前树是否为空
+     *
+     * @return
+     */
+    public boolean isEmpty() {
+        return size == 0;
+    }
+
+    //判断节点node的颜色
+    private boolean isRed(Node node){
+        if(node == null){
+            return BLACK;
+        }
+        return node.color;
+    }
+
+    private Node leftRotate(Node node){
+        Node x = node.right;
+
+        //左旋转
+        node.right = x.left;
+        x.left = node;
+
+        x.color = node.color;
+        node.color = RED;
+
+        return x;
+    }
+
+    private Node rightRotate(Node node){
+        Node x = node.left;
+
+        //右旋转
+        node.left = x.right;
+        x.right = node;
+
+        x.color = node.color;
+        node.color = RED;
+
+        return x;
+    }
+
+    private void flipColors(Node node){
+        node.color = RED;
+        node.left.color = BLACK;
+        node.right.color = BLACK;
+    }
+
+    /**
+     * 向红黑树添加一个新的元素
+     *
+     * @param key,value
+     */
+    public void add(K key,V value) {
+        root = add(root, key,value);
+        root.color = BLACK;//红黑树根节点必为黑色
+    }
+
+    /**
+     * 向以node为根节点的红黑树插入元素，递归算法
+     *
+     * @param node
+     * @param key,value
+     */
+    private Node add(Node node, K key,V value) {
+
+        //1.递归终止条件
+        if (node == null) {
+            size++;
+            return new Node(key,value);
+        }
+
+        //2.递归调用
+        if (key.compareTo(node.key) < 0) {
+            node.left = add(node.left, key,value);
+        } else if (key.compareTo(node.key) > 0) {
+            node.right = add(node.right,  key,value);
+        }else{
+            node.value = value;
+        }
+
+        //三步操作实现平衡--左旋转、右旋转、颜色翻转
+
+        // 右子节点为红色且左子节点不为红色，这时需要先进行左旋转
+        if(isRed(node.right) && !isRed(node.left)){
+            node = leftRotate(node);
+        }
+
+        // 左子节点为红色、左子节点的左子节点也为红色，需要进行右旋转
+        if(isRed(node.left) && isRed(node.left.left)){
+            node = rightRotate(node);
+        }
+
+        if(isRed(node.left) && isRed(node.right)){
+            flipColors(node);
+        }
+        return node;
+    }
+  //仅实现了添加操作
+}
+
+```
+
+### 3.7.3 红黑树的性能总结
+
+​	1.对于完全随机的数据，普通的二分搜索树就很好用。因为在增删过程中省去了维护平衡的操作。但是在极端情况下，普通的二分搜索树会高度不平衡，甚至退化成链表，这种情况下效率极低。
+
+​	2.对于查询较多的操作，AVL的性能优于红黑树，红黑树牺牲了一部分平衡性，所以查询操作的复杂度最大可达到O（2logn）级别，高于AVL的O(logn)。
+
+​	3.但是红黑树对于统计性能更优，即综合增删改查所有操作。
 
 # 四、集合与映射
 
@@ -2138,7 +3180,48 @@ public class LinkedListSet<E> implements Set<E>{
 }
 ```
 
-### 4.1.3 复杂度分析
+### 4.1.3 基于AVL树的set集合实现
+
+```java
+public class AVLSet<E extends Comparable<E>> implements Set<E> {
+
+    //由于AVLTree底层是支持key-value类型的数据的，而我们的set集合不是键值对，所以我们只保存一个值，value传null即可
+    private AVLTree<E,Object> avl;
+
+    public AVLSet(){
+        avl = new AVLTree<>();
+    }
+
+    @Override
+    public int getSize() {
+        return avl.getSize();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return avl.isEmpty();
+    }
+
+    @Override
+    public void add(E e) {
+        avl.add(e,null);
+    }
+
+    @Override
+    public boolean contains(E e) {
+        return avl.contains(e);
+    }
+
+    @Override
+    public void remove(E e) {
+        avl.remove(e);
+    }
+}
+```
+
+
+
+### 4.1.4 复杂度分析
 
 对比链表实现的set集合与二分搜索树的set集合时间复杂度：
 
@@ -2148,7 +3231,7 @@ public class LinkedListSet<E> implements Set<E>{
 | 查    | O（n） | O（logn）   | O（n）      |
 | 删    | O（n） | O（logn）   | O（n）      |
 
-### 4.1.4 有序集合和无序集合
+### 4.1.5 有序集合和无序集合
 
 ​	集合分为有序集合和无序集合，有序集合是指集合中元素具有顺序性，无序集合是指集合中元素不具有顺序性。有序集合基于搜索树实现，而无序集合基于哈希表的实现。
 
@@ -2334,7 +3417,7 @@ public class LinkedListMap<K,V> implements Map<K,V> {
 }
 ```
 
-### 4.2.2 基于映射实现Map
+### 4.2.2 基于二分搜索树实现Map
 
 ```java
 /**
@@ -2539,6 +3622,56 @@ public class BSTMap<K extends Comparable,V> implements Map<K,V>{
 
         node.left = removeMin(node.left);
         return node;
+    }
+}
+```
+
+
+
+### 4.2.3 基于AVL树实现Map
+
+```java
+public class AVLMap<K extends Comparable<K>,V> implements Map<K,V> {
+
+    private AVLTree<K,V> avl;
+
+    public AVLMap(){
+        avl = new AVLTree<>();
+    }
+
+    @Override
+    public void add(K key, V value) {
+        avl.add(key,value);
+    }
+
+    @Override
+    public V remove(K key) {
+        return avl.remove(key);
+    }
+
+    @Override
+    public boolean contains(K key) {
+        return avl.contains(key);
+    }
+
+    @Override
+    public V get(K key) {
+        return avl.get(key);
+    }
+
+    @Override
+    public void set(K key, V value) {
+        avl.set(key,value);
+    }
+
+    @Override
+    public int getSize() {
+        return avl.getSize();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return avl.isEmpty();
     }
 }
 ```
